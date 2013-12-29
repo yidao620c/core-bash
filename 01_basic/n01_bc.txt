@@ -1,0 +1,28 @@
+# bc  打开一个计数器
+scale=3  设置精度为3，保留小数点后面三位
+
+# man date  
+出现DATE(1) 这个1代表普通用户可执行程序
+1  普通用户命令或可执行文件
+4  设备文件
+5  配置文件
+8  系统管理员管理命令
+一般man page文件目录为/usr/share/man中
+软件的文档一般放/usr/share/doc文件夹中
+
+文件系统错误修复：
+livecd刻录系统盘后以光盘开机，然后
+# fsck /dev/sda1修复磁盘
+
+划分不同的分区：
+/
+/boot
+/home
+/usr
+/var
+
+忘记root密码方法：
+开机进入菜单界面，按e进入grub编辑模式后
+kernel /vmlinuz-2.6.38-34.e15 ro root=LABLE=/ rhgb quiet single
+注意在后面加一个single，按下enter，按下b进入单用户维护模式
+然后，直接passwd
