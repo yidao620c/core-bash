@@ -1,18 +1,24 @@
 #!/bin/bash
 # wingarden全自动化部署脚本
+# 说明：所有安装函数的第一个参数是被安装服务所在机器的IP地址，
+# 第二个参数是NFS服务器的IP地址
+#
+# 安装前的准备工作：
+#  NFS服务器 把安装包解压缩到上面
+#  NFS服务器 sudo vim /etc/ssh/sshd_config StrictHostKeyChecking no
+#  其他机器 orchard用户加入sudo组，然后在visudo里面把NOPASSWD放开
+#  其他机器 已经安装了rpcbind和nfs-common这两个软件
+#  其他机器 将NFS服务器上的pub_key一个个的加入authorized_keys文件中
+
 
 set -e
 
-# sysdb安装函数
-# 第一个参数是sysdb的IP地址，
-# 第二个参数是NFS的服务器IP
-# 第三个参数是
 function sysdb {
     if [[ $# != 2 ]]; then 
-        echo "请输入两个IP地址啊: sysdb_ip nfs_ip"
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
         exit 1
     fi
-    echo "log001--开始部署系统数据库pgsql"
+    echo "log sysdb -- 开始部署系统数据库pgsql"
     ssh -l orchard "$1" "
     set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
@@ -24,7 +30,7 @@ function sysdb {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install
-    ./install.sh sysdb
+    ./install.sh sysdb >/dev/null
     wait
     echo '安装sysdb成功后查看'
     if [[ \$(sudo /etc/init.d/postgresql status | grep 'is running') ]]; then
@@ -51,10 +57,10 @@ function sysdb {
 
 function nats {
     if [[ $# != 2 ]]; then 
-        echo "请输入两个IP地址啊: sysdb_ip nfs_ip"
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
         exit 1
     fi
-    echo "log001--开始部署Nats"
+    echo "log nats--开始部署Nats组件"
     ssh -l orchard "$1" "
     set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
@@ -66,7 +72,7 @@ function nats {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install
-    ./install.sh nats
+    ./install.sh nats >/dev/null
     wait
     echo '安装完后开始检查natsserver的状态.'
     if [[ \$(sudo /etc/init.d/nats_server status | grep 'is running') ]]; then
@@ -83,13 +89,13 @@ function nats {
     "
 }
 
+# $3: nats服务器IP地址
 function gorouter {
-    
     if [[ $# != 3 ]]; then 
-        echo "请输入3个IP地址啊: sysdb_ip nfs_ip nats_ip"
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
         exit 1
     fi
-    echo "log001--开始部署系统数据库pgsql"
+    echo "log gorouter -- 开始部署gorouter"
     ssh -l orchard "$1" "
     set -e
     echo '先安装go的编译环境依赖'
@@ -150,8 +156,67 @@ function gorouter {
     "
 }
 
+# cloud_controller 安装
+# $3: Nats服务器的IP地址
+# $4: 系统数据库Pgsql的IP地址
+# $5: domain_name
+function cloud_controller {
+    if [[ $# != 5 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip pgsql_ip domain_name"
+        exit 1
+    fi
+    echo "log cloud_controller -- 开始部署cloud_controller组件"
+    ssh -l orchard "$1" "
+    set -e
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh cloud_controller >/dev/null
+    wait
+    echo '开始修改配置文件cloud_controller.yml'
+    cc_config=/home/orchard/cloudfoundry/config/cloud_controller.yml
+    echo '修改external_uri地址'
+    sed -i '/external_uri:/{s/: .*$/: api.$5/}' \$cc_config
+    echo '修改local_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'local_route=\$local_route'
+    sed -i \"/local_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '修改系统数据库地址'
+    sed -i '/database: cloud_controller/{n; s/:.*$/: $4/}' \$cc_config
+    echo '修改UAA的url'
+    sed -i '/uaa:/{n; n; s/:.*$/: http:\/\/uaa.$5/}' \$cc_config
+    echo '修改redis的IP地址'
+    sed -i '/^redis:/{n; s/: .*$/: $4/}' \$cc_config
+    echo '替换完成了。。。。。。。。。'
+    echo '修改vcap_components.'
+    echo '{\"components\":[\"cloud_controller\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
+    cd ~
+    echo '结束后卸载nfs';
+    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    fi
+    sudo umount /home/orchard/nfs;
+    echo '卸载结果... $?';
+
+    echo '最后启动cloud_controller...'
+    sudo /etc/init.d/cloudfoundry start cloud_controller
+    wait 
+    echo '启动cloud_controller 完成，查看状态'
+    sudo /etc/init.d/cloudfoundry status
+    "
+}
+
 #sysdb 10.0.0.154 10.0.0.160
 #nats 10.0.0.158 10.0.0.160
-gorouter 10.0.0.158 10.0.0.160 10.0.0.158
+#gorouter 10.0.0.158 10.0.0.160 10.0.0.158
+cloud_controller 10.0.0.158 10.0.0.160 10.0.0.158 10.0.0.154 wingarden.net
 
 exit 0
