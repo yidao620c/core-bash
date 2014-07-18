@@ -214,9 +214,67 @@ function cloud_controller {
     "
 }
 
+# UAA 安装
+# $3: Nats服务器的IP地址
+# $4: 系统数据库Pgsql的IP地址
+# $5: domain_name
+function uaa {
+    if [[ $# != 5 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip pgsql_ip domain_name"
+        exit 1
+    fi
+    echo "log uaa -- 开始部部署uaa组件"
+    ssh -l orchard "$1" "
+    set -e
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh uaa >/dev/null
+    wait
+    echo '开始修改配置文件uaa.yml'
+    cc_config=/home/orchard/cloudfoundry/config/uaa.yml
+    echo '修改local_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'local_route=\$local_route'
+    sed -i \"/local_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '修改系统数据库地址'
+    sed -i '/5432\/uaa/{s/\/\/.*:5432/\/\/$4:5432/}' \$cc_config
+    sed -i '/5432\/cloud_controller/{s/\/\/.*:5432/\/\/$4:5432/}' \$cc_config
+    echo '修改UAA的uris'
+    sed -i '/uris:/{n; s/uaa\..*$/uaa.$5/}' \$cc_config
+    echo '修改vmc的redirect地址'
+    sed -i '/redirect-uri:/{s/^.*$/&,http:\/\/uaa.$5\/redirect\/vmc/}' \$cc_config
+    echo '替换完成了。。。。。。。。。'
+    echo '修改vcap_components.'
+    echo '{\"components\":[\"cloud_controller\",\"uaa\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
+    cd ~
+    echo '结束后卸载nfs';
+    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    fi
+    sudo umount /home/orchard/nfs;
+    echo '卸载结果... $?';
+
+    echo '最后启动uaa...'
+    sudo /etc/init.d/cloudfoundry start uaa
+    wait 
+    echo '启动uaa 完成，查看状态'
+    sudo /etc/init.d/cloudfoundry status
+    "
+}
+
 #sysdb 10.0.0.154 10.0.0.160
 #nats 10.0.0.158 10.0.0.160
 #gorouter 10.0.0.158 10.0.0.160 10.0.0.158
-cloud_controller 10.0.0.158 10.0.0.160 10.0.0.158 10.0.0.154 wingarden.net
+#cloud_controller 10.0.0.158 10.0.0.160 10.0.0.158 10.0.0.154 wingarden.net
+uaa 10.0.0.158 10.0.0.160 10.0.0.158 10.0.0.154 wingarden.net
 
 exit 0
