@@ -586,6 +586,37 @@ function mysql_node {
     "
 }
 
+# wingarden.net域名绑定
+function bind_domain {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip wingarden_ip domain_name"
+        exit 1
+    fi
+    echo "log bind_domain -- 开始绑定域名ip"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+
+    echo '开始编辑配置文件hosts'
+    if [[ ! \$(cat /etc/hosts |grep $4) ]]; then
+        sudo sed -i '\$a $3 api.$4 uaa.$4' /etc/hosts
+    fi
+
+    cd ~
+    echo '结束后卸载nfs';
+    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    fi
+    sudo umount /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
 #sysdb 10.0.0.154 10.0.0.160
 #nats 10.0.0.158 10.0.0.160
 #gorouter 10.0.0.158 10.0.0.160 10.0.0.158
@@ -596,6 +627,7 @@ function mysql_node {
 #dea 10.0.0.158 10.0.0.160 10.0.0.158 wingarden.net
 #install_mysql 10.0.0.158 10.0.0.160
 #mysql_gateway 10.0.0.158 10.0.0.160 10.0.0.158 wingarden.net
-mysql_node 10.0.0.158 10.0.0.160 10.0.0.158 10.0.0.158
+#mysql_node 10.0.0.158 10.0.0.160 10.0.0.158 10.0.0.158
+bind_domain 10.0.0.158 10.0.0.160 10.0.0.158 wingarden.net 
 
 exit 0
