@@ -203,6 +203,12 @@ function cloud_controller {
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
     echo '最后启动cloud_controller...'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start cloud_controller
     wait
@@ -258,6 +264,12 @@ function uaa {
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
     echo '最后启动uaa...'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start uaa
     wait
@@ -303,6 +315,12 @@ function stager {
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
     echo '最后启动stager...'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start stager
     wait
@@ -354,6 +372,12 @@ function health_manager {
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
     echo '最后启动health_manager...'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start health_manager
     wait
@@ -478,6 +502,12 @@ function mysql_gateway {
     if [[ ! \$(cat \$comp_file | grep mysql_gateway) ]]; then
         sed -i '/components/{s/]/,\"mysql_gateway\"]/}' \$comp_file
     fi
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
     echo '启动mysql_gateway'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start mysql_gateway
     wait
