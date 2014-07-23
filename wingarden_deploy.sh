@@ -31,7 +31,6 @@ function sysdb {
     fi
     echo "log sysdb -- 开始部署系统数据库pgsql"
     ssh -l orchard "$1" "
-    set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
     if [[ ! -d '/home/orchard/nfs' ]]; then 
@@ -50,14 +49,12 @@ function sysdb {
         echo 'Oh, No,,,postgresql wrong.'
         exit 1
     fi
-    wait 1
     if [[ \$(sudo /etc/init.d/vcap_redis status | grep 'is running') ]]; then
         echo 'vcap_redis is running..'
     else
         echo 'Oh no, vcap_redis is wrong.'
         exit 1
     fi
-    wait 1
     
     cd ~
     echo '结束后卸载nfs';
@@ -73,7 +70,6 @@ function nats {
     fi
     echo "log nats--开始部署Nats组件"
     ssh -l orchard "$1" "
-    set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
     if [[ ! -d '/home/orchard/nfs' ]]; then 
@@ -108,7 +104,6 @@ function gorouter {
     fi
     echo "log gorouter -- 开始部署gorouter"
     ssh -l orchard "$1" "
-    set -e
     echo '先安装go的编译环境依赖'
     sudo apt-get install -y git mercurial bzr build-essential 1>/dev/null 2>&1
     wait
@@ -175,7 +170,6 @@ function cloud_controller {
     fi
     echo "log cloud_controller -- 开始部署cloud_controller组件"
     ssh -l orchard "$1" "
-    set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
     if [[ ! -d '/home/orchard/nfs' ]]; then 
@@ -208,9 +202,9 @@ function cloud_controller {
     echo '{\"components\":[\"cloud_controller\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
@@ -237,7 +231,6 @@ function uaa {
     fi
     echo "log uaa -- 开始部部署uaa组件"
     ssh -l orchard "$1" "
-    set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
     if [[ ! -d '/home/orchard/nfs' ]]; then 
@@ -269,9 +262,9 @@ function uaa {
     echo '{\"components\":[\"cloud_controller\",\"uaa\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
@@ -298,7 +291,6 @@ function stager {
     fi
     echo "log stager -- 开始部部署stager组件"
     ssh -l orchard "$1" "
-    set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
     if [[ ! -d '/home/orchard/nfs' ]]; then 
@@ -320,9 +312,9 @@ function stager {
         > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
@@ -349,7 +341,6 @@ function health_manager {
     fi
     echo "log health_manager -- 开始部部署health_manager组件"
     ssh -l orchard "$1" "
-    set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
     if [[ ! -d '/home/orchard/nfs' ]]; then 
@@ -377,9 +368,9 @@ function health_manager {
         > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
@@ -406,7 +397,6 @@ function dea {
     fi
     echo "log dea -- 开始部部署dea组件"
     ssh -l orchard "$1" "
-    set -e
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
     if [[ ! -d '/home/orchard/nfs' ]]; then 
@@ -434,9 +424,9 @@ function dea {
     echo '替换完成了。。。。。。。。。'
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
 
@@ -464,13 +454,13 @@ function install_mysql {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install/misc/mysql
-    sudo sh -c './install_mysql.sh'
+    sudo sh -c './install_mysql.sh >/dev/null'
     wait
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
     "
@@ -528,9 +518,9 @@ function mysql_gateway {
 
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
     "
@@ -589,9 +579,9 @@ function mysql_node {
 
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
     "
@@ -621,9 +611,9 @@ function bind_domain {
 
     cd ~
     echo '结束后卸载nfs';
-    if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-        sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    fi
+    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
+    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
+    #fi
     sudo umount /home/orchard/nfs;
     echo '卸载结果... $?';
     "
