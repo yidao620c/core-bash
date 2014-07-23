@@ -4,12 +4,23 @@
 # 第二个参数是NFS服务器的IP地址
 #
 # 安装前的准备工作：
-#  NFS服务器 把安装包解压缩到上面
-#  NFS服务器 sudo vim /etc/ssh/sshd_config StrictHostKeyChecking no
-#  其他机器 orchard用户加入sudo组，然后在visudo里面把NOPASSWD放开
-#  其他机器 已经安装了rpcbind和nfs-common这两个软件
-#  其他机器 将NFS服务器上的pub_key一个个的加入authorized_keys文件中
-
+#   NFS服务器 把安装包解压缩到上面
+#   NFS服务器 sudo vim /etc/ssh/sshd_config StrictHostKeyChecking no
+#   NFS服务器 放入脚本和配置文件，还有python源码，目前是在10.0.0.160上测试
+#   NFS服务器 安装python3，还有包yaml和psycopg2，都使用源码安装
+#   其他机器 orchard用户加入sudo组，然后在visudo里面把NOPASSWD放开
+#   其他机器 已经安装了rpcbind和nfs-common这两个软件
+#   其他机器 将NFS服务器上的pub_key一个个的加入authorized_keys文件中
+#
+# 安装后的处理工作(这个脚本已经自动做了)：
+#   如果没有DNS，那么在/etc/hosts文件中加入10.0.0.158 api.wingarden.net uaa.wingarden.net
+#   cloud_controller数据库清空static_routes
+#   uaa数据库将oauth_client_details表中client_id=simple和vmc的两行里面
+#   web_server_redirect_uri更新为：http://uaa.wingarden.net/redirect/vmc,https://uaa.wingarden.net/redirect/vmc
+#
+# 客户端vmc测试的时候
+#   /etc/hosts文件中加入10.0.0.158 api.wingarden.net uaa.wingarden.net
+#   对于每个新建应用比如应用名为newapp，那么还要添加newapp.wingarden.net
 
 set -e
 
@@ -617,6 +628,43 @@ function bind_domain {
     echo '卸载结果... $?';
     "
 }
+
+domain_name=$(python loadyml.py domain_name)
+nfs_server_ip=$(python loadyml.py nfs_server)
+sysdb_ip=$(python loadyml.py sysdb)
+nats_ip=$(python loadyml.py nats)
+router_ip=$(python loadyml.py router)
+cloud_controller_ip=$(python loadyml.py cloud_controller)
+uaa_ip=$(python loadyml.py uaa)
+stager_ip=$(python loadyml.py stager)
+health_manager_ip=$(python loadyml.py health_manager)
+deas_ip=$(python loadyml.py deas)
+mango_ip=$(python loadyml.py mango)
+filesystem_gateway_ip=$(python loadyml.py filesystem_gateway)
+mysql_gateway_ip=$(python loadyml.py mysql_gateway)
+mysql_nodes_ip=$(python loadyml.py mysql_nodes)
+postgresql_gateway_ip=$(python loadyml.py postgresql_gateway)
+postgresql_nodes_ip=$(python loadyml.py postgresql_nodes)
+oracle_gateway_ip=$(python loadyml.py oracle_gateway)
+oracle_nodes_ip=$(python loadyml.py oracle_nodes)
+memcached_gateway_ip=$(python loadyml.py memcached_gateway)
+memcached_nodes_ip=$(python loadyml.py memcached_nodes)
+redis_gateway_ip=$(python loadyml.py redis_gateway)
+redis_nodes_ip=$(python loadyml.py redis_nodes)
+mongodb_gateway_ip=$(python loadyml.py mongodb_gateway)
+mongodb_nodes_ip=$(python loadyml.py mongodb_nodes)
+rabbitmq_gateway_ip=$(python loadyml.py rabbitmq_gateway)
+rabbitmq_nodes_ip=$(python loadyml.py rabbitmq_nodes)
+cloud9_gateway_ip=$(python loadyml.py cloud9_gateway)
+cloud9_nodes_ip=$(python loadyml.py cloud9_nodes)
+svn_gateway_ip=$(python loadyml.py svn_gateway)
+svn_nodes_ip=$(python loadyml.py svn_nodes)
+
+echo $domain_name
+echo $nfs_server_ip
+echo $sysdb_ip
+echo $svn_nodes_ip
+
 #sysdb 10.0.0.154 10.0.0.160
 #nats 10.0.0.158 10.0.0.160
 #gorouter 10.0.0.158 10.0.0.160 10.0.0.158
@@ -628,6 +676,7 @@ function bind_domain {
 #install_mysql 10.0.0.158 10.0.0.160
 #mysql_gateway 10.0.0.158 10.0.0.160 10.0.0.158 wingarden.net
 #mysql_node 10.0.0.158 10.0.0.160 10.0.0.158 10.0.0.158
-bind_domain 10.0.0.158 10.0.0.160 10.0.0.158 wingarden.net 
+#bind_domain 10.0.0.158 10.0.0.160 10.0.0.158 wingarden.net
+
 
 exit 0
