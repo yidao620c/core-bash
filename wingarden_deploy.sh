@@ -58,7 +58,7 @@ function sysdb {
     
     cd ~
     echo '结束后卸载nfs';
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
     "
 }
@@ -91,7 +91,7 @@ function nats {
 
     cd ~
     echo '结束后卸载nfs';
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
     "
 }
@@ -157,7 +157,7 @@ function gorouter {
     sudo update-rc.d gorouter defaults 20 80
     cd ~
     echo '结束后卸载nfs';
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
     "
 }
@@ -202,10 +202,7 @@ function cloud_controller {
     echo '{\"components\":[\"cloud_controller\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
 
     echo 'ruby加入environment'
@@ -262,10 +259,7 @@ function uaa {
     echo '{\"components\":[\"cloud_controller\",\"uaa\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
 
     echo 'ruby加入environment'
@@ -312,10 +306,7 @@ function stager {
         > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
 
     echo 'ruby加入environment'
@@ -368,10 +359,7 @@ function health_manager {
         > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
 
     echo 'ruby加入environment'
@@ -424,10 +412,7 @@ function dea {
     echo '替换完成了。。。。。。。。。'
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
 
     echo '最后启动dea...'
@@ -458,10 +443,7 @@ function install_mysql {
     wait
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
     "
 }
@@ -483,7 +465,7 @@ function mysql_gateway {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install
-    ./install.sh mysql_gateway
+    ./install.sh mysql_gateway >/dev/null
     wait
 
     echo '开始编辑配置文件mysql_gateway.yml'
@@ -518,10 +500,7 @@ function mysql_gateway {
 
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
     "
 }
@@ -543,7 +522,7 @@ function mysql_node {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install
-    ./install.sh mysql_node
+    ./install.sh mysql_node >/dev/null
     wait
 
     echo '开始编辑配置文件mysql_node.yml'
@@ -579,14 +558,52 @@ function mysql_node {
 
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
     "
 }
 
+# 安装mango
+function mango {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip sysdb_ip domain_name"
+        exit 1
+    fi
+    echo "log mango -- 开始安装mango"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh mango >/dev/null
+    wait
+
+    echo '开始编辑mango配置文件'
+    cd /home/orchard/mango-1.5/properties
+    echo '修改database.conf'
+    sed -i '/^MDB_IP=/{s/=.*$/=$3/}' database.conf
+    sed -i '/^TDB_IP=/{s/=.*$/=$3/}' database.conf
+    echo '修改global.properties'
+    sed -i '/^domain=/{s/=.*$/=$4/}' global.properties
+    echo '替换完成了。。。。。。。。。'
+    echo '修改完成后，先启动nginx服务'
+    sudo /etc/init.d/nginx15 start
+    wait
+    echo '然后启动mango服务'
+    sudo /etc/init.d/mango15 start
+    wait
+
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
 # wingarden.net域名绑定
 function bind_domain {
     if [[ $# != 4 ]]; then
@@ -611,10 +628,7 @@ function bind_domain {
 
     cd ~
     echo '结束后卸载nfs';
-    #if [[ \$(lsof | grep /home/orchard/nfs) ]]; then
-    #    sudo kill -9 \$(lsof | grep /home/orchard/nfs | awk '{print \$2}')
-    #fi
-    sudo umount /home/orchard/nfs;
+    sudo umount -f -l /home/orchard/nfs;
     echo '卸载结果... $?';
     "
 }
@@ -654,6 +668,7 @@ echo $domain_name
 echo $nfs_server_ip
 echo $sysdb_ip
 echo $svn_nodes_ip
+echo $deas_ip
 
 sysdb $sysdb_ip $nfs_server_ip
 nats $nats_ip $nfs_server_ip
@@ -670,6 +685,7 @@ for mysqlnode_ip in "$mysql_nodes_ip"; do
     install_mysql $mysqlnode_ip $nfs_server_ip
     mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
 done
+mango $mango_ip $nfs_server_ip $sysdb_ip $domain_name
 bind_domain $cloud_controller_ip $nfs_server_ip $cloud_controller_ip $domain_name
 
 
