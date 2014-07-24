@@ -253,7 +253,9 @@ function uaa {
     echo '修改UAA的uris'
     sed -i '/uris:/{n; s/uaa\..*$/uaa.$5/}' \$cc_config
     echo '修改vmc的redirect地址'
-    sed -i '/redirect-uri:/{s/^.*$/&,http:\/\/uaa.$5\/redirect\/vmc/}' \$cc_config
+    if [[ ! \$(cat \$cc_config | grep -E 'redirect-uri:.*uaa.$5') ]]; then
+        sed -i '/redirect-uri:/{s/^.*$/&,http:\/\/uaa.$5\/redirect\/vmc/}' \$cc_config
+    fi
     echo '替换完成了。。。。。。。。。'
     echo '修改vcap_components.'
     echo '{\"components\":[\"cloud_controller\",\"uaa\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
@@ -439,6 +441,8 @@ function install_mysql {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install/misc/mysql
+    echo '修改my.cnf文件'
+    sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' my.cnf 
     sudo sh -c './install_mysql.sh >/dev/null'
     wait
     cd ~
@@ -526,9 +530,7 @@ function mysql_node {
     wait
 
     echo '开始编辑配置文件mysql_node.yml'
-    cc_config=/home/orchard/cloudfoundry/config/mysql_gateway.yml
-    echo '修改domain'
-    sed -i '/cloud_controller_uri:/{s/:.*$/: $4/}' \$cc_config
+    cc_config=/home/orchard/cloudfoundry/config/mysql_node.yml
     echo '修改ip_route'
     local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
     echo 'ip_route=\$local_route'
@@ -591,12 +593,27 @@ function mango {
     echo '修改global.properties'
     sed -i '/^domain=/{s/=.*$/=$4/}' global.properties
     echo '替换完成了。。。。。。。。。'
+    echo '启动mango的nginx之前，先检查下端口占用情况'
+    ng_conf=/usr/local/nginx-1.4.2/conf/nginx15.conf
+    echo '修改nginx15中的domain'
+    sudo sed -i 's/wingarden.net/$domain_name/' \$ng_conf
+    if [[ \$(sudo netstat -tnlp | grep -w 80) ]]; then
+        echo '80端口已经被占用了, 改用8088端口，后面访问mango也用这个端口'
+        sudo sed -i 's/ 80;/ 8088;/' \$ng_conf
+    fi
+    if [[ \$(sudo netstat -tnlp | grep -w 443) ]]; then
+        echo 'https的443端口已经被占用了, 改用444端口'
+        sudo sed -i 's/443;/444;/' \$ng_conf
+    fi
+    echo '如果有PID文件，先删之'
+    if [[ -f /home/orchard/mango-1.5/RUNNING_PID ]]; then
+        sudo rm -f /home/orchard/mango-1.5/RUNNING_PID
+    fi
     echo '修改完成后，先启动nginx服务'
     sudo /etc/init.d/nginx15 start
     wait
     echo '然后启动mango服务'
-    sudo /etc/init.d/mango15 start
-    wait
+    sudo /etc/init.d/mango15 start >/dev/null
 
     cd ~
     echo '结束后卸载nfs';
