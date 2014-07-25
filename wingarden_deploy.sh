@@ -484,6 +484,8 @@ function mysql_gateway {
     sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
     echo '修改nats的IP地址'
     sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '加入默认配额项'
+    sed -i '/ default_quota:/a\\  mem_default_quota: 30\\n  disk_default_quota: 30' \$cc_config
     echo '替换完成了。。。。。。。。。'
 
     echo '开始往vcap_components文件中加入'
@@ -699,7 +701,7 @@ echo $deas_ip
 #for deaipp in "$deas_ip"; do
 #    dea $deaipp $nfs_server_ip $nats_ip $domain_name
 #done
-mysql_gateway $mysql_gateway_ip $nfs_server_ip $nats_ip $domain_name
+#mysql_gateway $mysql_gateway_ip $nfs_server_ip $nats_ip $domain_name
 #for mysqlnode_ip in "$mysql_nodes_ip"; do
 #    install_mysql $mysqlnode_ip $nfs_server_ip
 #    mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
