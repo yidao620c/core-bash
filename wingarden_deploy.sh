@@ -418,7 +418,9 @@ function dea {
     echo '卸载结果... $?';
 
     echo '最后启动dea...'
-    sudo sh -c '/etc/init.d/dea start >/dev/null'
+    if [[ ! \$(ps -ef |grep -v grep| grep dea) ]]; then
+        sudo sh -c '/etc/init.d/dea start >/dev/null'
+    fi
     wait 
     echo '启动dea 完成'
     "
@@ -475,7 +477,7 @@ function mysql_gateway {
     echo '开始编辑配置文件mysql_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/mysql_gateway.yml
     echo '修改domain'
-    sed -i '/cloud_controller_uri:/{s/:.*$/: $4/}' \$cc_config
+    sed -i '/cloud_controller_uri:/{s/:.*$/: api.$4/}' \$cc_config
     echo '修改ip_route'
     local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
     echo 'ip_route=\$local_route'
@@ -687,23 +689,23 @@ echo $sysdb_ip
 echo $svn_nodes_ip
 echo $deas_ip
 
-sysdb $sysdb_ip $nfs_server_ip
-nats $nats_ip $nfs_server_ip
-gorouter $router_ip $nfs_server_ip $nats_ip
-cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-uaa $uaa_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-stager $stager_ip $nfs_server_ip $nats_ip
-health_manager $health_manager_ip $nfs_server_ip $nats_ip $sysdb_ip
-for deaipp in "$deas_ip"; do
-    dea $deaipp $nfs_server_ip $nats_ip $domain_name
-done
+#sysdb $sysdb_ip $nfs_server_ip
+#nats $nats_ip $nfs_server_ip
+#gorouter $router_ip $nfs_server_ip $nats_ip
+#cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
+#uaa $uaa_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
+#stager $stager_ip $nfs_server_ip $nats_ip
+#health_manager $health_manager_ip $nfs_server_ip $nats_ip $sysdb_ip
+#for deaipp in "$deas_ip"; do
+#    dea $deaipp $nfs_server_ip $nats_ip $domain_name
+#done
 mysql_gateway $mysql_gateway_ip $nfs_server_ip $nats_ip $domain_name
-for mysqlnode_ip in "$mysql_nodes_ip"; do
-    install_mysql $mysqlnode_ip $nfs_server_ip
-    mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
-done
-mango $mango_ip $nfs_server_ip $sysdb_ip $domain_name
-bind_domain $cloud_controller_ip $nfs_server_ip $cloud_controller_ip $domain_name
+#for mysqlnode_ip in "$mysql_nodes_ip"; do
+#    install_mysql $mysqlnode_ip $nfs_server_ip
+#    mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
+#done
+#mango $mango_ip $nfs_server_ip $sysdb_ip $domain_name
+#bind_domain $cloud_controller_ip $nfs_server_ip $cloud_controller_ip $domain_name
 
 
 exit 0
