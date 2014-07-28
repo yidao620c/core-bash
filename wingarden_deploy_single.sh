@@ -13,7 +13,28 @@
 set -e
 
 function install_python {
-    echo 'start install python3...'
+    echo '开始安装python3环境'
+    if [[ ! $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
+        sudo apt-get install -y libreadline6-dev
+        tar -jxv -f Python-3.3.0.tar.bz2
+        cd Python-3.3.0
+        ./configure
+        sudo make install
+        wait
+        sudo mv /usr/bin/python /usr/bin/python2.6.6
+        sudo ln -s /usr/local/bin/python3 /usr/bin/python
+        echo 'python 版本不是3，开始安装....'
+        echo 'start install python3...'
+    fi
+    if [[ $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
+        echo 'python3安装成功'
+    else
+        echo 'python3安装失败'
+        exit 1
+    fi
+    echo '开始安装psycopg2包'
+    sudo apt-get install -y python-psycopg2
+    echo '安装python依赖成功...'
 }
 
 function sysdb {
@@ -551,9 +572,11 @@ echo $sysdb_ip
 echo $svn_nodes_ip
 echo $deas_ip
 
+install_python
 sysdb $sysdb_ip $nfs_server_ip
-#nats $nats_ip $nfs_server_ip
-#gorouter $router_ip $nfs_server_ip $nats_ip
+python after_install.py $sysdb_ip 5432 root changeme $domain_name
+nats $nats_ip $nfs_server_ip
+gorouter $router_ip $nfs_server_ip $nats_ip
 #cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
 #uaa $uaa_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
 #stager $stager_ip $nfs_server_ip $nats_ip

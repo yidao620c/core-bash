@@ -7,7 +7,7 @@
 #   NFS服务器 把安装包解压缩到上面
 #   NFS服务器 sudo vim /etc/ssh/sshd_config StrictHostKeyChecking no
 #   NFS服务器 放入脚本和配置文件，还有python源码，目前是在10.0.0.160上测试
-#   NFS服务器 安装python3，还有包yaml和psycopg2，都使用源码安装
+#   NFS服务器 安装python3，还有包yaml和psycopg2，都使用源码安装, 这是一台centos机器
 #   其他机器 orchard用户加入sudo组，然后在visudo里面把NOPASSWD放开
 #   其他机器 已经安装了rpcbind和nfs-common这两个软件
 #   其他机器 将NFS服务器上的pub_key一个个的加入authorized_keys文件中
@@ -23,6 +23,41 @@
 #   对于每个新建应用比如应用名为newapp，那么还要添加newapp.wingarden.net
 
 set -e
+
+function install_python {
+    echo '开始安装python3环境'
+    if [[ ! $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
+        sudo yum install -y zlib-devel bzip2-devel openssl-devel ncurses-devel
+        tar -jxv -f Python-3.3.0.tar.bz2
+        cd Python-3.3.0
+        ./configure
+        sudo make install
+        wait
+        sudo mv /usr/bin/python /usr/bin/python2.6.6
+        sudo ln -s /usr/local/bin/python3 /usr/bin/python
+        echo 'python 版本不是3，开始安装....'
+        echo 'start install python3...'
+        fi  
+        if [[ $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
+        echo 'python3安装成功'
+        else
+        echo 'python3安装失败'
+        exit 1
+    fi  
+    echo '开始安装yaml包'
+    tar -zxvf PyYAML-3.11.tar.gz
+    cd PyYAML-3.11
+    sudo python setup.py install
+    echo '安装yaml成功'
+    echo '开始安装psycopg2'
+    sudo yum install -y postgresql-devel
+    sudo yum install -y gcc
+    tar -zxvf psycopg2-2.5.3.tar.gz
+    cd psycopg2-2.5.3
+    sudo python setup.py install
+    echo 'psycpg2安装成功...'
+    echo '安装python依赖成功...'
+}
 
 function install_python {
     echo 'todo...'
@@ -841,6 +876,7 @@ echo $deas_ip
 
 #install_python
 #sysdb $sysdb_ip $nfs_server_ip
+#python after_install.py $sysdb_ip 5432 root changeme $domain_name 
 #nats $nats_ip $nfs_server_ip
 #gorouter $router_ip $nfs_server_ip $nats_ip
 #cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
