@@ -24,9 +24,13 @@
 
 set -e
 
+function install_python {
+    echo 'todo...'
+}
+
 function sysdb {
     if [[ $# != 2 ]]; then 
-        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
         exit 1
     fi
     echo "log sysdb -- 开始部署系统数据库pgsql"
@@ -65,7 +69,7 @@ function sysdb {
 
 function nats {
     if [[ $# != 2 ]]; then 
-        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
         exit 1
     fi
     echo "log nats--开始部署Nats组件"
@@ -343,7 +347,7 @@ function health_manager {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install
-    sh -c './install.sh health_manager >/dev/null'
+    ./install.sh health_manager >/dev/null
     wait
     echo '开始修改配置文件health_manager.yml'
     cc_config=/home/orchard/cloudfoundry/config/health_manager.yml
@@ -396,7 +400,7 @@ function dea {
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install
-    sh -c './install.sh dea >/dev/null'
+    ./install.sh dea >/dev/null
     wait
     echo '在secure_path中添加ruby路径'
     add_path='Defaults  secure_path=\"/home/orchard/language/ruby19/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
@@ -423,34 +427,6 @@ function dea {
     fi
     wait 
     echo '启动dea 完成'
-    "
-}
-
-# 安装mysql数据库
-function install_mysql {
-    if [[ $# != 2 ]]; then
-        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
-        exit 1
-    fi
-    echo "log install_mysql -- 开始安装mysql数据库"
-    ssh -l orchard "$1" "
-    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
-    echo '建立客户端的NFS挂载目录'
-    if [[ ! -d '/home/orchard/nfs' ]]; then 
-        mkdir /home/orchard/nfs
-    else echo 'nfs目录存在无需再创建'
-    fi
-    sudo mount -t nfs $2:/home/public /home/orchard/nfs
-    echo '挂载结果: $?'
-    cd /home/orchard/nfs/wingarden_install/misc/mysql
-    echo '修改my.cnf文件'
-    sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' my.cnf 
-    sudo sh -c './install_mysql.sh >/dev/null'
-    wait
-    cd ~
-    echo '结束后卸载nfs';
-    sudo umount -f -l /home/orchard/nfs;
-    echo '卸载结果... $?';
     "
 }
 
@@ -513,6 +489,34 @@ function mysql_gateway {
     "
 }
 
+# 安装mysql数据库
+function install_mysql {
+    if [[ $# != 2 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
+        exit 1
+    fi
+    echo "log install_mysql -- 开始安装mysql数据库"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install/misc/mysql
+    echo '修改my.cnf文件'
+    sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' my.cnf 
+    sudo sh -c './install_mysql.sh >/dev/null'
+    wait
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
 # 安装mysql_node组件
 function mysql_node {
     if [[ $# != 4 ]]; then
@@ -520,6 +524,149 @@ function mysql_node {
         exit 1
     fi
     echo "log mysql_node -- 开始安装mysql_node组件"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh mysql_node >/dev/null
+    wait
+
+    echo '开始编辑配置文件mysql_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/mysql_node.yml
+    echo '修改ip_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'ip_route=\$local_route'
+    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '修改mysql数据库IP地址'
+    sed -i '/mysql:/{n; s/:.*$/: $4/}' \$cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! \$(cat \$comp_file | grep mysql_node) ]]; then
+        sed -i '/components/{s/]/,\"mysql_node\"]/}' \$comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动mysql_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start mysql_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
+# 安装postgresql_gateway组件
+function postgresql_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log postgresql_gateway -- 开始安装postgresql_gateway组件"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh mysql_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件mysql_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/mysql_gateway.yml
+    echo '修改domain'
+    sed -i '/cloud_controller_uri:/{s/:.*$/: api.$4/}' \$cc_config
+    echo '修改ip_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'ip_route=\$local_route'
+    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '加入默认配额项'
+    sed -i '/ default_quota:/a\\  mem_default_quota: 30\\n  disk_default_quota: 30' \$cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! \$(cat \$comp_file | grep mysql_gateway) ]]; then
+        sed -i '/components/{s/]/,\"mysql_gateway\"]/}' \$comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动mysql_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start mysql_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    wait
+
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
+# 安装postgresql数据库
+function install_postgresql {
+    if [[ $# != 2 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
+        exit 1
+    fi
+    echo "log install_mysql -- 开始安装mysql数据库"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install/misc/mysql
+    echo '修改my.cnf文件'
+    sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' my.cnf 
+    sudo sh -c './install_mysql.sh >/dev/null'
+    wait
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
+# 安装postgresql_node组件
+function postgresql_node {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip mysql_ip"
+        exit 1
+    fi
+    echo "log postgresql_node -- 开始安装postgresql_node组件"
     ssh -l orchard "$1" "
     echo '成功登录$1 ，现在开始挂载NFS服务器目录'
     echo '建立客户端的NFS挂载目录'
@@ -625,6 +772,7 @@ function mango {
     echo '卸载结果... $?';
     "
 }
+
 # wingarden.net域名绑定
 function bind_domain {
     if [[ $# != 4 ]]; then
@@ -691,23 +839,29 @@ echo $sysdb_ip
 echo $svn_nodes_ip
 echo $deas_ip
 
-sysdb $sysdb_ip $nfs_server_ip
-nats $nats_ip $nfs_server_ip
-gorouter $router_ip $nfs_server_ip $nats_ip
-cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-uaa $uaa_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-stager $stager_ip $nfs_server_ip $nats_ip
-health_manager $health_manager_ip $nfs_server_ip $nats_ip $sysdb_ip
-for deaipp in "$deas_ip"; do
-    dea $deaipp $nfs_server_ip $nats_ip $domain_name
+#install_python
+#sysdb $sysdb_ip $nfs_server_ip
+#nats $nats_ip $nfs_server_ip
+#gorouter $router_ip $nfs_server_ip $nats_ip
+#cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
+#uaa $uaa_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
+#stager $stager_ip $nfs_server_ip $nats_ip
+#health_manager $health_manager_ip $nfs_server_ip $nats_ip $sysdb_ip
+#for deaipp in "$deas_ip"; do
+#    dea $deaipp $nfs_server_ip $nats_ip $domain_name
+#done
+#mysql_gateway $mysql_gateway_ip $nfs_server_ip $nats_ip $domain_name
+#for mysqlnode_ip in "$mysql_nodes_ip"; do
+#    install_mysql $mysqlnode_ip $nfs_server_ip
+#    mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
+#done
+postgresql_gateway $postgresql_gateway_ip $nfs_server_ip $nats_ip $domain_name
+for pg_ip in "$postgresql_nodes_ip"; do
+    install_postgresql $pg_ip $nfs_server_ip
+    postgresql_node $pg_ip $nfs_server_ip $nats_ip $pg_ip
 done
-mysql_gateway $mysql_gateway_ip $nfs_server_ip $nats_ip $domain_name
-for mysqlnode_ip in "$mysql_nodes_ip"; do
-    install_mysql $mysqlnode_ip $nfs_server_ip
-    mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
-done
-mango $mango_ip $nfs_server_ip $sysdb_ip $domain_name
-bind_domain $cloud_controller_ip $nfs_server_ip $cloud_controller_ip $domain_name
+#mango $mango_ip $nfs_server_ip $sysdb_ip $domain_name
+#bind_domain $cloud_controller_ip $nfs_server_ip $cloud_controller_ip $domain_name
 
 
 exit 0
