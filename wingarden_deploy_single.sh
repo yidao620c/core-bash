@@ -160,7 +160,7 @@ function cloud_controller {
     sed -i "/^redis:/{n; s/: .*$/: $4/}" $cc_config
     echo '替换完成了。。。。。。。。。'
     echo '修改vcap_components.'
-    if [[ ! cat /home/orchard/cloudfoundry/config/vcap_components.json |grep 'cloud_controller' ]]; then
+    if [[ ! $(cat /home/orchard/cloudfoundry/config/vcap_components.json |grep 'cloud_controller') ]]; then
         echo '{"components":["cloud_controller"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
     fi
     cd ~
@@ -208,7 +208,7 @@ function uaa {
     fi
     echo '替换完成了。。。。。。。。。'
     echo '修改vcap_components.'
-    if [[ ! cat /home/orchard/cloudfoundry/config/vcap_components.json |grep 'uaa' ]]; then
+    if [[ ! $(cat /home/orchard/cloudfoundry/config/vcap_components.json |grep 'uaa') ]]; then
         echo '{"components":["cloud_controller","uaa"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
     fi
     cd ~
