@@ -34,6 +34,7 @@ function install_python {
         exit 1
     fi
     echo '开始安装psycopg2包'
+    sudo apt-get remove -y libpq-dev
     sudo apt-get install -y python-psycopg2
     sudo apt-get install -y libpq-dev python-dev
     cd $pwd_dir
@@ -387,8 +388,11 @@ function install_mysql {
     echo "log install_mysql -- 开始安装mysql数据库"
     cd /home/orchard/nfs/wingarden_install/misc/mysql
     echo '修改my.cnf文件'
-    sed -i '/bind_address/a\skip-name-resolve\nlower_case_table_names=1' my.cnf 
-    sudo sh -c './install_mysql.sh >/dev/null'
+    cat my.cnf > /tmp/my.cnf
+    sed -i '/bind_address/a\skip-name-resolve\nlower_case_table_names=1' /tmp/my.cnf 
+    if [[ ! $(ps aux |grep mysqld) ]]; then
+        sudo sh -c './install_mysql.sh >/dev/null'
+    fi
     echo 'mysql安装成功...'
 }
 
@@ -417,7 +421,7 @@ function mysql_node {
 
     echo '开始往vcap_components文件中加入'
     comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
-    if [[ ! $(cat \$comp_file | grep mysql_node) ]]; then
+    if [[ ! $(cat $comp_file | grep mysql_node) ]]; then
         sed -i '/components/{s/]/,"mysql_node"]/}' $comp_file
     fi
     echo 'ruby加入environment'
@@ -492,8 +496,15 @@ function bind_domain {
     fi
     echo 'bind_domain成功...'
 }
-single_ip=$1
-domain_name=$single_ip
+
+
+if [[ "$#" != 2 ]]; then
+    echo "please input machine_ip domain_name"
+    exit 1
+fi
+
+single_ip="$1"
+domain_name="$2"
 nfs_server_ip=$single_ip
 sysdb_ip=$single_ip
 nats_ip=$single_ip
@@ -531,20 +542,20 @@ cd $pwd_dir
 python after_install.py "$sysdb_ip" "5432" "root" "changeme" "$domain_name"
 nats "$nats_ip" "$nfs_server_ip"
 gorouter "$router_ip" "$nfs_server_ip" "$nats_ip"
-#cloud_controller "$cloud_controller_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
-#uaa "$uaa_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
-#stager "$stager_ip" "$nfs_server_ip" "$nats_ip"
-#health_manager "$health_manager_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip"
-#for deaipp in "$deas_ip"; do
-#    dea "$deaipp" "$nfs_server_ip" "$nats_ip" "$domain_name"
-#done
-#mysql_gateway "$mysql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
-#for mysqlnode_ip in "$mysql_nodes_ip"; do
-#    install_mysql "$mysqlnode_ip" "$nfs_server_ip"
-#    mysql_node "$mysqlnode_ip" "$nfs_server_ip" "$nats_ip" "$mysqlnode_ip"
-#done
-#mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
-#bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
+cloud_controller "$cloud_controller_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+uaa "$uaa_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+stager "$stager_ip" "$nfs_server_ip" "$nats_ip"
+health_manager "$health_manager_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip"
+for deaipp in "$deas_ip"; do
+    dea "$deaipp" "$nfs_server_ip" "$nats_ip" "$domain_name"
+done
+mysql_gateway "$mysql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+for mysqlnode_ip in "$mysql_nodes_ip"; do
+    install_mysql "$mysqlnode_ip" "$nfs_server_ip"
+    mysql_node "$mysqlnode_ip" "$nfs_server_ip" "$nats_ip" "$mysqlnode_ip"
+done
+mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
+bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
 
 
 exit 0

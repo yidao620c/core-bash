@@ -542,8 +542,11 @@ function install_mysql {
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install/misc/mysql
     echo '修改my.cnf文件'
-    sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' my.cnf 
-    sudo sh -c './install_mysql.sh >/dev/null'
+    cat my.cnf >/tmp/my.cnf
+    sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' /tmp/my.cnf 
+    if [[ ! \$(ps aux |grep mysqld) ]]; then
+        sudo sh -c './install_mysql.sh >/dev/null'
+    fi
     wait
     cd ~
     echo '结束后卸载nfs';
