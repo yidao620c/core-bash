@@ -874,30 +874,32 @@ echo $sysdb_ip
 echo $svn_nodes_ip
 echo $deas_ip
 
+pwd_dir=$(pwd)
 #install_python
-#sysdb $sysdb_ip $nfs_server_ip
-#python after_install.py $sysdb_ip 5432 root changeme $domain_name 
-#nats $nats_ip $nfs_server_ip
-#gorouter $router_ip $nfs_server_ip $nats_ip
-#cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-#uaa $uaa_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-#stager $stager_ip $nfs_server_ip $nats_ip
-#health_manager $health_manager_ip $nfs_server_ip $nats_ip $sysdb_ip
+#sysdb "$sysdb_ip" "$nfs_server_ip"
+cd "$pwd_dir"
+#python after_install.py "$sysdb_ip" "5432" "root" "changeme" "$domain_name" 
+#nats "$nats_ip" "$nfs_server_ip"
+#gorouter "$router_ip" "$nfs_server_ip" "$nats_ip"
+#cloud_controller "$cloud_controller_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+#uaa "$uaa_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+#stager "$stager_ip" "$nfs_server_ip" "$nats_ip"
+#health_manager "$health_manager_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip"
 #for deaipp in "$deas_ip"; do
-#    dea $deaipp $nfs_server_ip $nats_ip $domain_name
+#    dea "$deaipp" "$nfs_server_ip" "$nats_ip" "$domain_name"
 #done
-#mysql_gateway $mysql_gateway_ip $nfs_server_ip $nats_ip $domain_name
+#mysql_gateway "$mysql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
 #for mysqlnode_ip in "$mysql_nodes_ip"; do
-#    install_mysql $mysqlnode_ip $nfs_server_ip
-#    mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
+#    install_mysql "$mysqlnode_ip" "$nfs_server_ip"
+#    mysql_node "$mysqlnode_ip" "$nfs_server_ip" "$nats_ip" "$mysqlnode_ip"
 #done
-postgresql_gateway $postgresql_gateway_ip $nfs_server_ip $nats_ip $domain_name
+postgresql_gateway "$postgresql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
 for pg_ip in "$postgresql_nodes_ip"; do
-    install_postgresql $pg_ip $nfs_server_ip
-    postgresql_node $pg_ip $nfs_server_ip $nats_ip $pg_ip
+    install_postgresql "$pg_ip" "$nfs_server_ip"
+    postgresql_node "$pg_ip" "$nfs_server_ip" "$nats_ip" "$pg_ip"
 done
-#mango $mango_ip $nfs_server_ip $sysdb_ip $domain_name
-#bind_domain $cloud_controller_ip $nfs_server_ip $cloud_controller_ip $domain_name
+#mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
+#bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
 
 
 exit 0

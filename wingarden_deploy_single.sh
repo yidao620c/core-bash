@@ -14,6 +14,7 @@ set -e
 
 function install_python {
     echo '开始安装python3环境'
+    pwd_dir=$(pwd)
     if [[ ! $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
         sudo apt-get install -y libreadline6-dev
         tar -jxv -f Python-3.3.0.tar.bz2
@@ -34,6 +35,11 @@ function install_python {
     fi
     echo '开始安装psycopg2包'
     sudo apt-get install -y python-psycopg2
+    sudo apt-get install -y libpq-dev python-dev
+    cd $pwd_dir
+    tar -zxvf psycopg2-2.5.3.tar.gz >/dev/null
+    cd psycopg2-2.5.3/
+    sudo python setup.py install >/dev/null
     echo '安装python依赖成功...'
 }
 
@@ -60,20 +66,16 @@ function sysdb {
 
 function nats {
     echo "log nats--开始部署Nats组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh nats >/dev/null
     wait
     echo '安装完后开始检查natsserver的状态.'
-    if [[ \$(sudo /etc/init.d/nats_server status | grep 'is running') ]]; then
+    if [[ $(sudo /etc/init.d/nats_server status | grep 'is running') ]]; then
         echo 'Success.'
     else
         echo 'Oh No.... natsserver is wrong.'
         exit 1
     fi
-    cd ~
-    "
-    wait
     echo '安装nats成功...'
 }
 
@@ -83,7 +85,6 @@ function gorouter {
         exit 1
     fi
     echo "log gorouter -- 开始部署gorouter"
-    sh -c "
     echo '先安装go的编译环境依赖'
     sudo apt-get install -y git mercurial bzr build-essential 1>/dev/null 2>&1
     wait
@@ -91,15 +92,15 @@ function gorouter {
     tar -zxvf gorouter.tar.gz -C /home/orchard 1>/dev/null
     wait
     echo 'tar finished..'
-    if [[ ! \$(cat /etc/profile |grep gopath) ]]; then
-        sudo sh -c 'echo \"export PATH=/home/orchard/go/bin:\\\$PATH\" >> /etc/profile'
-        sudo sh -c 'echo \"export GOPATH=/home/orchard/gopath\" >> /etc/profile'
+    if [[ ! $(cat /etc/profile |grep gopath) ]]; then
+        sudo sh -c 'echo "export PATH=/home/orchard/go/bin:\$PATH" >> /etc/profile'
+        sudo sh -c 'echo "export GOPATH=/home/orchard/gopath" >> /etc/profile'
     fi
     source /etc/profile
     echo 'source finished.'
     wait
     go_config='/home/orchard/gopath/src/github.com/cloudfoundry/gorouter/config/config.go'
-    sed -i '/defaultNatsConfig = NatsConfig/{n; s/\".*\"/\"$3\"/g;}' \$go_config
+    sed -i '/defaultNatsConfig = NatsConfig/{n; s/".*"/"$3"/g;}' $go_config
     echo 'nats ip替换完成了'
     cd /home/orchard/gopath
     echo '开始编译go'
@@ -116,12 +117,12 @@ function gorouter {
     echo 'copy gorouter to init.d directory'
     sudo cp /home/orchard/nfs/wingarden_install/router/gorouter /etc/init.d/
     echo '启动 gorouter..'
-    if [[ ! \$(ps aux |grep -v grep  |grep router) ]]; then
+    if [[ ! $(ps aux |grep -v grep  |grep router) ]]; then
         sudo /etc/init.d/gorouter start
         wait
     fi
     echo '检查gorouter启动状态'
-    if [[ \$(sudo /etc/init.d/gorouter status | grep 'is running') ]]; then
+    if [[ $(sudo /etc/init.d/gorouter status | grep 'is running') ]]; then
         echo 'gorouter is running...'
     else
         echo 'Oh, No... gorouter status is wrong.'
@@ -129,9 +130,6 @@ function gorouter {
     fi
     echo '设置自启动'
     sudo update-rc.d gorouter defaults 20 80
-    cd ~
-    "
-    wait 
     echo 'gorouter安装成功'
 }
 
@@ -141,35 +139,36 @@ function cloud_controller {
         exit 1
     fi
     echo "log cloud_controller -- 开始部署cloud_controller组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh cloud_controller >/dev/null
     wait
     echo '开始修改配置文件cloud_controller.yml'
     cc_config=/home/orchard/cloudfoundry/config/cloud_controller.yml
     echo '修改external_uri地址'
-    sed -i '/external_uri:/{s/: .*$/: api.$5/}' \$cc_config
+    sed -i "/external_uri:/{s/: .*$/: api.$5/}" $cc_config
     echo '修改local_route'
-    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
-    echo 'local_route=\$local_route'
-    sed -i \"/local_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "local_route=$local_route"
+    sed -i "/local_route:/{s/: .*$/: $local_route/}" $cc_config
     echo '修改nats的IP地址'
-    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
     echo '修改系统数据库地址'
-    sed -i '/database: cloud_controller/{n; s/:.*$/: $4/}' \$cc_config
+    sed -i "/database: cloud_controller/{n; s/:.*$/: $4/}" $cc_config
     echo '修改UAA的url'
-    sed -i '/uaa:/{n; n; s/:.*$/: http:\/\/uaa.$5/}' \$cc_config
+    sed -i "/uaa:/{n; n; s/:.*$/: http:\/\/uaa.$5/}" $cc_config
     echo '修改redis的IP地址'
-    sed -i '/^redis:/{n; s/: .*$/: $4/}' \$cc_config
+    sed -i "/^redis:/{n; s/: .*$/: $4/}" $cc_config
     echo '替换完成了。。。。。。。。。'
     echo '修改vcap_components.'
-    echo '{\"components\":[\"cloud_controller\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! cat /home/orchard/cloudfoundry/config/vcap_components.json |grep 'cloud_controller' ]]; then
+        echo '{"components":["cloud_controller"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
+    fi
     cd ~
 
     echo 'ruby加入environment'
-    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
         ruby_path=/home/orchard/language/ruby19/bin
-        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
     fi
     . /etc/environment
     echo '最后启动cloud_controller...'
@@ -177,9 +176,6 @@ function cloud_controller {
     wait
     echo '查看状态'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
-    wait
-    "
-    wait
     echo 'cloud_controller安装成功...'
 }
 
@@ -190,36 +186,37 @@ function uaa {
         exit 1
     fi
     echo "log uaa -- 开始部部署uaa组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh uaa >/dev/null
     wait
     echo '开始修改配置文件uaa.yml'
     cc_config=/home/orchard/cloudfoundry/config/uaa.yml
     echo '修改local_route'
-    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
-    echo 'local_route=\$local_route'
-    sed -i \"/local_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "local_route=$local_route"
+    sed -i "/local_route:/{s/: .*$/: $local_route/}" $cc_config
     echo '修改nats的IP地址'
-    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
     echo '修改系统数据库地址'
-    sed -i '/5432\/uaa/{s/\/\/.*:5432/\/\/$4:5432/}' \$cc_config
-    sed -i '/5432\/cloud_controller/{s/\/\/.*:5432/\/\/$4:5432/}' \$cc_config
+    sed -i "/5432\/uaa/{s/\/\/.*:5432/\/\/$4:5432/}" $cc_config
+    sed -i "/5432\/cloud_controller/{s/\/\/.*:5432/\/\/$4:5432/}" $cc_config
     echo '修改UAA的uris'
-    sed -i '/uris:/{n; s/uaa\..*$/uaa.$5/}' \$cc_config
+    sed -i "/uris:/{n; s/uaa\..*$/uaa.$5/}" $cc_config
     echo '修改vmc的redirect地址'
-    if [[ ! \$(cat \$cc_config | grep -E 'redirect-uri:.*uaa.$5') ]]; then
-        sed -i '/redirect-uri:/{s/^.*$/&,http:\/\/uaa.$5\/redirect\/vmc/}' \$cc_config
+    if [[ ! $(cat \$cc_config | grep -E "redirect-uri:.*uaa.$5") ]]; then
+        sed -i "/redirect-uri:/{s/^.*$/&,http:\/\/uaa.$5\/redirect\/vmc/}" $cc_config
     fi
     echo '替换完成了。。。。。。。。。'
     echo '修改vcap_components.'
-    echo '{\"components\":[\"cloud_controller\",\"uaa\"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! cat /home/orchard/cloudfoundry/config/vcap_components.json |grep 'uaa' ]]; then
+        echo '{"components":["cloud_controller","uaa"]}' > /home/orchard/cloudfoundry/config/vcap_components.json
+    fi
     cd ~
 
     echo 'ruby加入environment'
-    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
         ruby_path=/home/orchard/language/ruby19/bin
-        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
     fi
     . /etc/environment
     echo '最后启动uaa...'
@@ -227,9 +224,6 @@ function uaa {
     wait
     echo '查看状态'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
-    wait
-    "
-    wait
     echo 'uaa安装成功...'
 }
 
@@ -240,24 +234,23 @@ function stager {
         exit 1
     fi
     echo "log stager -- 开始部部署stager组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh stager >/dev/null
     wait
     echo '开始修改配置文件stager.yml'
     cc_config=/home/orchard/cloudfoundry/config/stager.yml
     echo '修改nats的IP地址'
-    sed -i '/nats_uri:/{s/@.*:/@$3:/}' \$cc_config
+    sed -i "/nats_uri:/{s/@.*:/@$3:/}" $cc_config
     echo '替换完成了。。。。。。。。。'
     echo '修改vcap_components.'
-    echo '{\"components\":[\"cloud_controller\",\"uaa\",\"stager\"]}' \\
+    echo '{"components":["cloud_controller","uaa","stager"]}' \
         > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
 
     echo 'ruby加入environment'
-    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
         ruby_path=/home/orchard/language/ruby19/bin
-        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
     fi
     . /etc/environment
     echo '最后启动stager...'
@@ -265,9 +258,6 @@ function stager {
     wait
     echo '查看状态'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
-    wait
-    "
-    wait
     echo 'stager安装成功...'
 }
 
@@ -278,30 +268,29 @@ function health_manager {
         exit 1
     fi
     echo "log health_manager -- 开始部部署health_manager组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh health_manager >/dev/null
     wait
     echo '开始修改配置文件health_manager.yml'
     cc_config=/home/orchard/cloudfoundry/config/health_manager.yml
     echo '修改local_route'
-    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
-    echo 'local_route=\$local_route'
-    sed -i \"/local_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "local_route=$local_route"
+    sed -i "/local_route:/{s/: .*$/: $local_route/}" $cc_config
     echo '修改nats的IP地址'
-    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
     echo '修改系统数据库地址'
-    sed -i '/database: cloud_controller/{n; s/:.*$/: $4/}' \$cc_config
+    sed -i "/database: cloud_controller/{n; s/:.*$/: $4/}" $cc_config
     echo '替换完成了。。。。。。。。。'
     echo '修改vcap_components.'
-    echo '{\"components\":[\"cloud_controller\",\"uaa\",\"stager\",\"health_manager\"]}' \\
+    echo '{"components":["cloud_controller","uaa","stager","health_manager"]}' \
         > /home/orchard/cloudfoundry/config/vcap_components.json
     cd ~
 
     echo 'ruby加入environment'
-    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
         ruby_path=/home/orchard/language/ruby19/bin
-        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
     fi
     . /etc/environment
     echo '最后启动health_manager...'
@@ -309,9 +298,6 @@ function health_manager {
     wait
     echo '查看状态'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
-    wait
-    "
-    wait
     echo 'health_manager安装成功...'
 }
 
@@ -322,34 +308,29 @@ function dea {
         exit 1
     fi
     echo "log dea -- 开始部部署dea组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh dea >/dev/null
     wait
     echo '在secure_path中添加ruby路径'
-    add_path='Defaults  secure_path=\"/home/orchard/language/ruby19/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"'
-    sudo sh -c 'echo $add_path >> /etc/sudoers'
+    add_path='Defaults  secure_path="/home/orchard/language/ruby19/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"'
+    sudo sh -c "echo $add_path >> /etc/sudoers"
     echo '开始修改配置文件dea.yml'
     cc_config=/home/orchard/dea/config/dea.yml
     echo '修改local_route'
-    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
-    echo 'local_route=\$local_route'
-    sed -i \"/local_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "local_route=$local_route"
+    sed -i "/local_route:/{s/: .*$/: $local_route/}" $cc_config
     echo '修改nats的IP地址'
-    sed -i '/nats_uri:/{s/@.*:/@$3:/}' \$cc_config
+    sed -i "/nats_uri:/{s/@.*:/@$3:/}" $cc_config
     echo '修改domain'
-    sed -i '/domain:/{s/:.*$/: $4/}' \$cc_config
+    sed -i "/domain:/{s/:.*$/: $4/}" $cc_config
     echo '替换完成了。。。。。。。。。'
     cd ~
 
     echo '最后启动dea...'
-    if [[ ! \$(ps -ef |grep -v grep| grep dea) ]]; then
+    if [[ ! $(ps -ef |grep -v grep| grep dea) ]]; then
         sudo sh -c '/etc/init.d/dea start >/dev/null'
     fi
-    wait 
-    echo '启动dea 完成'
-    "
-    wait
     echo 'dea安装成功...'
 }
 
@@ -360,7 +341,6 @@ function mysql_gateway {
         exit 1
     fi
     echo "log mysql_gateway -- 开始安装mysql_gateway组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh mysql_gateway >/dev/null
     wait
@@ -368,26 +348,26 @@ function mysql_gateway {
     echo '开始编辑配置文件mysql_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/mysql_gateway.yml
     echo '修改domain'
-    sed -i '/cloud_controller_uri:/{s/:.*$/: api.$4/}' \$cc_config
+    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
     echo '修改ip_route'
-    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
-    echo 'ip_route=\$local_route'
-    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
     echo '修改nats的IP地址'
-    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
     echo '加入默认配额项'
-    sed -i '/ default_quota:/a\\  mem_default_quota: 30\\n  disk_default_quota: 30' \$cc_config
+    sed -i "/ default_quota:/a\  mem_default_quota: 30\n  disk_default_quota: 30" $cc_config
     echo '替换完成了。。。。。。。。。'
 
     echo '开始往vcap_components文件中加入'
     comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
-    if [[ ! \$(cat \$comp_file | grep mysql_gateway) ]]; then
-        sed -i '/components/{s/]/,\"mysql_gateway\"]/}' \$comp_file
+    if [[ ! $(cat \$comp_file | grep mysql_gateway) ]]; then
+        sed -i '/components/{s/]/,"mysql_gateway"]/}' $comp_file
     fi
     echo 'ruby加入environment'
-    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
         ruby_path=/home/orchard/language/ruby19/bin
-        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
     fi
     . /etc/environment
     echo '启动mysql_gateway'
@@ -395,11 +375,6 @@ function mysql_gateway {
     wait
     echo '查看状态'
     /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
-    wait
-
-    cd ~
-    "
-    wait
     echo 'mysql_gateway安装成功'
 }
 
@@ -410,15 +385,10 @@ function install_mysql {
         exit 1
     fi
     echo "log install_mysql -- 开始安装mysql数据库"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install/misc/mysql
     echo '修改my.cnf文件'
-    sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' my.cnf 
+    sed -i '/bind_address/a\skip-name-resolve\nlower_case_table_names=1' my.cnf 
     sudo sh -c './install_mysql.sh >/dev/null'
-    wait
-    cd ~
-    "
-    wait
     echo 'mysql安装成功...'
 }
 
@@ -429,7 +399,6 @@ function mysql_node {
         exit 1
     fi
     echo "log mysql_node -- 开始安装mysql_node组件"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh mysql_node >/dev/null
     wait
@@ -437,24 +406,24 @@ function mysql_node {
     echo '开始编辑配置文件mysql_node.yml'
     cc_config=/home/orchard/cloudfoundry/config/mysql_node.yml
     echo '修改ip_route'
-    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
-    echo 'ip_route=\$local_route'
-    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
     echo '修改nats的IP地址'
-    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
     echo '修改mysql数据库IP地址'
-    sed -i '/mysql:/{n; s/:.*$/: $4/}' \$cc_config
+    sed -i "/mysql:/{n; s/:.*$/: $4/}" $cc_config
     echo '替换完成了。。。。。。。。。'
 
     echo '开始往vcap_components文件中加入'
     comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
-    if [[ ! \$(cat \$comp_file | grep mysql_node) ]]; then
-        sed -i '/components/{s/]/,\"mysql_node\"]/}' \$comp_file
+    if [[ ! $(cat \$comp_file | grep mysql_node) ]]; then
+        sed -i '/components/{s/]/,"mysql_node"]/}' $comp_file
     fi
     echo 'ruby加入environment'
-    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
         ruby_path=/home/orchard/language/ruby19/bin
-        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
     fi
     . /etc/environment
     echo '启动mysql_node'
@@ -463,9 +432,6 @@ function mysql_node {
     echo '查看状态'
     ./vcap_dev status
 
-    cd ~
-    "
-    wait
     echo 'mysql_node安装成功'
 }
 
@@ -476,7 +442,6 @@ function mango {
         exit 1
     fi
     echo "log mango -- 开始安装mango"
-    sh -c "
     cd /home/orchard/nfs/wingarden_install
     ./install.sh mango >/dev/null
     wait
@@ -484,22 +449,22 @@ function mango {
     echo '开始编辑mango配置文件'
     cd /home/orchard/mango-1.5/properties
     echo '修改database.conf'
-    sed -i '/^MDB_IP=/{s/=.*$/=$3/}' database.conf
-    sed -i '/^TDB_IP=/{s/=.*$/=$3/}' database.conf
+    sed -i "/^MDB_IP=/{s/=.*$/=$3/}" database.conf
+    sed -i "/^TDB_IP=/{s/=.*$/=$3/}" database.conf
     echo '修改global.properties'
-    sed -i '/^domain=/{s/=.*$/=$4/}' global.properties
+    sed -i "/^domain=/{s/=.*$/=$4/}" global.properties
     echo '替换完成了。。。。。。。。。'
     echo '启动mango的nginx之前，先检查下端口占用情况'
     ng_conf=/usr/local/nginx-1.4.2/conf/nginx15.conf
     echo '修改nginx15中的domain'
-    sudo sed -i 's/wingarden.net/$domain_name/' \$ng_conf
-    if [[ \$(sudo netstat -tnlp | grep -w 80) ]]; then
+    sudo sed -i "s/wingarden.net/$domain_name/" $ng_conf
+    if [[ $(sudo netstat -tnlp | grep -w 80) ]]; then
         echo '80端口已经被占用了, 改用8088端口，后面访问mango也用这个端口'
-        sudo sed -i 's/ 80;/ 8088;/' \$ng_conf
+        sudo sed -i "s/ 80;/ 8088;/" $ng_conf
     fi
-    if [[ \$(sudo netstat -tnlp | grep -w 443) ]]; then
+    if [[ $(sudo netstat -tnlp | grep -w 443) ]]; then
         echo 'https的443端口已经被占用了, 改用444端口'
-        sudo sed -i 's/443;/444;/' \$ng_conf
+        sudo sed -i 's/443;/444;/' $ng_conf
     fi
     echo '如果有PID文件，先删之'
     if [[ -f /home/orchard/mango-1.5/RUNNING_PID ]]; then
@@ -511,9 +476,6 @@ function mango {
     echo '然后启动mango服务'
     sudo /etc/init.d/mango15 start >/dev/null
 
-    cd ~
-    "
-    wait
     echo 'mango安装成功...'
 }
 
@@ -524,14 +486,10 @@ function bind_domain {
         exit 1
     fi
     echo "log bind_domain -- 开始绑定域名ip"
-    sh -c "
     echo '开始编辑配置文件hosts'
-    if [[ ! \$(cat /etc/hosts |grep $4) ]]; then
-        sudo sed -i '\$a $3 api.$4 uaa.$4' /etc/hosts
+    if [[ ! $(cat /etc/hosts |grep "$4") ]]; then
+        sudo sed -i "$a $3 api.$4 uaa.$4" /etc/hosts
     fi
-    cd ~
-    "
-    wait
     echo 'bind_domain成功...'
 }
 single_ip=$1
@@ -566,35 +524,27 @@ cloud9_nodes_ip=$single_ip
 svn_gateway_ip=$single_ip
 svn_nodes_ip=$single_ip
 
-echo $domain_name
-echo $nfs_server_ip
-echo $sysdb_ip
-echo $svn_nodes_ip
-echo $deas_ip
-
+pwd_dir=$(pwd)
 install_python
-sysdb $sysdb_ip $nfs_server_ip
-python after_install.py $sysdb_ip 5432 root changeme $domain_name
-nats $nats_ip $nfs_server_ip
-gorouter $router_ip $nfs_server_ip $nats_ip
-#cloud_controller $cloud_controller_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-#uaa $uaa_ip $nfs_server_ip $nats_ip $sysdb_ip $domain_name
-#stager $stager_ip $nfs_server_ip $nats_ip
-#health_manager $health_manager_ip $nfs_server_ip $nats_ip $sysdb_ip
+sysdb "$sysdb_ip" "$nfs_server_ip"
+cd $pwd_dir
+python after_install.py "$sysdb_ip" "5432" "root" "changeme" "$domain_name"
+nats "$nats_ip" "$nfs_server_ip"
+gorouter "$router_ip" "$nfs_server_ip" "$nats_ip"
+#cloud_controller "$cloud_controller_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+#uaa "$uaa_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+#stager "$stager_ip" "$nfs_server_ip" "$nats_ip"
+#health_manager "$health_manager_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip"
 #for deaipp in "$deas_ip"; do
-#    dea $deaipp $nfs_server_ip $nats_ip $domain_name
+#    dea "$deaipp" "$nfs_server_ip" "$nats_ip" "$domain_name"
 #done
-#mysql_gateway $mysql_gateway_ip $nfs_server_ip $nats_ip $domain_name
+#mysql_gateway "$mysql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
 #for mysqlnode_ip in "$mysql_nodes_ip"; do
-#    install_mysql $mysqlnode_ip $nfs_server_ip
-#    mysql_node $mysqlnode_ip $nfs_server_ip $nats_ip $mysqlnode_ip
+#    install_mysql "$mysqlnode_ip" "$nfs_server_ip"
+#    mysql_node "$mysqlnode_ip" "$nfs_server_ip" "$nats_ip" "$mysqlnode_ip"
 #done
-#for pg_ip in "$postgresql_nodes_ip"; do
-#    install_postgresql $pg_ip $nfs_server_ip
-#    postgresql_node $pg_ip $nfs_server_ip $nats_ip $pg_ip
-#done
-#mango $mango_ip $nfs_server_ip $sysdb_ip $domain_name
-#bind_domain $cloud_controller_ip $nfs_server_ip $cloud_controller_ip $domain_name
+#mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
+#bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
 
 
 exit 0
