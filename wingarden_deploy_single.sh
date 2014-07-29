@@ -51,22 +51,19 @@ function sysdb {
     ./install.sh sysdb >/dev/null
     wait
     echo '安装sysdb成功后查看'
-    if [[ $(sudo /etc/init.d/postgresql status | grep 'is running') ]]; then
+    if [[ $(sudo /etc/init.d/postgresql status |grep -v grep | grep 'is running') ]]; then
         echo 'postgresql status is running...'
     else
         echo 'Oh, No,,,postgresql wrong.'
         exit 1
     fi
     echo 'start to check redis status...'
-    echo 'start to check redis status...'
-    echo 'start to check redis status...'
-    echo 'start to check redis status...'
-    if [[ $(sudo /etc/init.d/vcap_redis status | grep 'is running') ]]; then
-        echo 'vcap_redis is running..'
-    else
-        echo 'Oh no, vcap_redis is wrong.'
-        exit 1
-    fi
+    #if [[ $(sudo /etc/init.d/vcap_redis status | grep 'is running') ]]; then
+    #    echo 'vcap_redis is running..'
+    #else
+    #    echo 'Oh no, vcap_redis is wrong.'
+    #    exit 1
+    #fi
     echo 'sysdb安装成功..'
 }
 
@@ -76,7 +73,7 @@ function nats {
     ./install.sh nats >/dev/null
     wait
     echo '安装完后开始检查natsserver的状态.'
-    if [[ $(sudo /etc/init.d/nats_server status | grep 'is running') ]]; then
+    if [[ $(sudo /etc/init.d/nats_server status |grep -v grep | grep 'is running') ]]; then
         echo 'Success.'
     else
         echo 'Oh No.... natsserver is wrong.'
@@ -99,14 +96,14 @@ function gorouter {
     wait
     echo 'tar finished..'
     if [[ ! $(cat /etc/profile |grep gopath) ]]; then
-        sudo sh -c 'echo "export PATH=/home/orchard/go/bin:\$PATH" >> /etc/profile'
+        sudo sh -c 'echo "export PATH=/home/orchard/go/bin:$PATH" >> /etc/profile'
         sudo sh -c 'echo "export GOPATH=/home/orchard/gopath" >> /etc/profile'
     fi
     source /etc/profile
     echo 'source finished.'
     wait
     go_config='/home/orchard/gopath/src/github.com/cloudfoundry/gorouter/config/config.go'
-    sed -i '/defaultNatsConfig = NatsConfig/{n; s/".*"/"$3"/g;}' $go_config
+    sed -i "/defaultNatsConfig = NatsConfig/{n; s/\".*\"/\"$3\"/g;}" $go_config
     echo 'nats ip替换完成了'
     cd /home/orchard/gopath
     echo '开始编译go'
@@ -128,7 +125,7 @@ function gorouter {
         wait
     fi
     echo '检查gorouter启动状态'
-    if [[ $(sudo /etc/init.d/gorouter status | grep 'is running') ]]; then
+    if [[ $(sudo /etc/init.d/gorouter status |grep -v grep | grep 'is running') ]]; then
         echo 'gorouter is running...'
     else
         echo 'Oh, No... gorouter status is wrong.'
@@ -395,7 +392,7 @@ function install_mysql {
     echo '修改my.cnf文件'
     cat my.cnf > /tmp/my.cnf
     sed -i '/bind_address/a\skip-name-resolve\nlower_case_table_names=1' /tmp/my.cnf 
-    if [[ ! $(ps aux |grep mysqld) ]]; then
+    if [[ ! $(ps aux |grep -v grep |grep mysqld) ]]; then
         sudo sh -c './install_mysql.sh >/dev/null'
     fi
     echo 'mysql安装成功...'

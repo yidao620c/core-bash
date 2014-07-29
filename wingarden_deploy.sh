@@ -158,7 +158,7 @@ function gorouter {
     tar -zxvf gorouter.tar.gz -C /home/orchard 1>/dev/null
     wait
     echo 'tar finished..'
-    sudo sh -c 'echo \"export PATH=/home/orchard/go/bin:\\\$PATH\" >> /etc/profile'
+    sudo sh -c 'echo \"export PATH=/home/orchard/go/bin:\$PATH\" >> /etc/profile'
     sudo sh -c 'echo \"export GOPATH=/home/orchard/gopath\" >> /etc/profile'
     source /etc/profile
     echo 'source finished.'
@@ -186,7 +186,7 @@ function gorouter {
         wait
     fi
     echo '检查gorouter启动状态'
-    if [[ \$(sudo /etc/init.d/gorouter status | grep 'is running') ]]; then
+    if [[ \$(sudo /etc/init.d/gorouter status |grep -v grep | grep 'is running') ]]; then
         echo 'gorouter is running...'
     else
         echo 'Oh, No... gorouter status is wrong.'
@@ -544,7 +544,7 @@ function install_mysql {
     echo '修改my.cnf文件'
     cat my.cnf >/tmp/my.cnf
     sed -i '/bind_address/a\\skip-name-resolve\\nlower_case_table_names=1' /tmp/my.cnf 
-    if [[ ! \$(ps aux |grep mysqld) ]]; then
+    if [[ ! \$(ps aux |grep -v grep |grep mysqld) ]]; then
         sudo sh -c './install_mysql.sh >/dev/null'
     fi
     wait
