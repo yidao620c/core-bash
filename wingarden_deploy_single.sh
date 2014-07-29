@@ -2,9 +2,10 @@
 # wingarden全自动化部署脚本, 单独一台机器
 #
 # 安装前的准备工作：
-#   把安装包解压缩到上面, /home/orchard/nfs
-#   放入脚本和配置文件，还有python源码，目前是在10.0.0.160上测试
-#   安装python3，还有包psycopg2，都使用源码安装
+#   把安装包解压缩到/home/orchard/nfs
+#   也可以用nfs挂载，目前10.0.0.160可以挂载/home/public目录
+#   sudo mount -t nfs 10.0.0.160:/home/public /home/orchard/nfs 
+#   把脚本和配置文件，还有python源码放到某个目录，比如/home/orchard/work
 #
 # 客户端vmc测试的时候
 #   /etc/hosts文件中加入10.0.0.158 api.wingarden.net uaa.wingarden.net
@@ -362,7 +363,7 @@ function mysql_gateway {
 
     echo '开始往vcap_components文件中加入'
     comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
-    if [[ ! $(cat \$comp_file | grep mysql_gateway) ]]; then
+    if [[ ! $(cat $comp_file | grep mysql_gateway) ]]; then
         sed -i '/components/{s/]/,"mysql_gateway"]/}' $comp_file
     fi
     echo 'ruby加入environment'
@@ -437,6 +438,109 @@ function mysql_node {
     ./vcap_dev status
 
     echo 'mysql_node安装成功'
+}
+
+# 安装postgresql_gateway组件
+function postgresql_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log postgresql_gateway -- 开始安装postgresql_gateway组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh postgresql_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件postgresql_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/postgresql_gateway.yml
+    echo '修改domain'
+    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '加入默认配额项'
+    sed -i "/service:/a\  default_quota: 25\n  disk_default_quota: 128" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'postgresql_gateway') ]]; then
+        sed -i '/components/{s/]/,"postgresql_gateway"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动postgresql_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start postgresql_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    echo 'postgresql_gateway安装成功'
+}
+
+# 安装postgresql数据库
+function install_postgresql {
+    if [[ $# != 2 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
+        exit 1
+    fi
+    if [[ ! $(ps aux |grep -v grep |grep -w postgres) ]]; then
+        echo "log install_postgresql -- 开始安装postgresql数据库"
+        cd /home/orchard/nfs/wingarden_install/misc/postgresql
+        sudo sh -c './install_postgresql.sh >/dev/null'
+        echo 'postgresql安装成功...'
+    else
+        echo 'postgresql已经安装...'
+    fi
+}
+
+# 安装postgresql_node组件
+function postgresql_node {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip postgresql_ip"
+        exit 1
+    fi
+    echo "log postgresql_node -- 开始安装postgresql_node组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh postgresql_node >/dev/null
+    wait
+
+    echo '开始编辑配置文件postgresql_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/postgresql_node.yml
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '修改postgresql数据库IP地址'
+    sed -i "/postgresql:/{n; s/:.*$/: $4/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'postgresql_node') ]]; then
+        sed -i '/components/{s/]/,"postgresql_node"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动postgresql_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start postgresql_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    echo 'postgresql_node安装成功'
 }
 
 # 安装mango
@@ -535,27 +639,32 @@ cloud9_nodes_ip=$single_ip
 svn_gateway_ip=$single_ip
 svn_nodes_ip=$single_ip
 
-pwd_dir=$(pwd)
-install_python
-sysdb "$sysdb_ip" "$nfs_server_ip"
-cd $pwd_dir
-python after_install.py "$sysdb_ip" "5432" "root" "changeme" "$domain_name"
-nats "$nats_ip" "$nfs_server_ip"
-gorouter "$router_ip" "$nfs_server_ip" "$nats_ip"
-cloud_controller "$cloud_controller_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
-uaa "$uaa_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
-stager "$stager_ip" "$nfs_server_ip" "$nats_ip"
-health_manager "$health_manager_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip"
-for deaipp in "$deas_ip"; do
-    dea "$deaipp" "$nfs_server_ip" "$nats_ip" "$domain_name"
-done
-mysql_gateway "$mysql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
-for mysqlnode_ip in "$mysql_nodes_ip"; do
-    install_mysql "$mysqlnode_ip" "$nfs_server_ip"
-    mysql_node "$mysqlnode_ip" "$nfs_server_ip" "$nats_ip" "$mysqlnode_ip"
-done
-mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
-bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
+#pwd_dir=$(pwd)
+#install_python
+#sysdb "$sysdb_ip" "$nfs_server_ip"
+#cd $pwd_dir
+#python after_install.py "$sysdb_ip" "5432" "root" "changeme" "$domain_name"
+#nats "$nats_ip" "$nfs_server_ip"
+#gorouter "$router_ip" "$nfs_server_ip" "$nats_ip"
+#cloud_controller "$cloud_controller_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+#uaa "$uaa_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip" "$domain_name"
+#stager "$stager_ip" "$nfs_server_ip" "$nats_ip"
+#health_manager "$health_manager_ip" "$nfs_server_ip" "$nats_ip" "$sysdb_ip"
+#for deaipp in "$deas_ip"; do
+#    dea "$deaipp" "$nfs_server_ip" "$nats_ip" "$domain_name"
+#done
+#mysql_gateway "$mysql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+#for mysqlnode_ip in "$mysql_nodes_ip"; do
+#    install_mysql "$mysqlnode_ip" "$nfs_server_ip"
+#    mysql_node "$mysqlnode_ip" "$nfs_server_ip" "$nats_ip" "$mysqlnode_ip"
+#done
+#postgresql_gateway "$postgresql_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+#for pg_ip in "$postgresql_nodes_ip"; do
+#    install_postgresql "$pg_ip" "$nfs_server_ip"
+#    postgresql_node "$pg_ip" "$nfs_server_ip" "$nats_ip" "$pg_ip"
+#done
+#mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
+#bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
 
 
 exit 0
