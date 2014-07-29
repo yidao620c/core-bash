@@ -760,6 +760,148 @@ function postgresql_node {
     "
 }
 
+# 安装memcached_gateway组件
+function memcached_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log memcached_gateway -- 开始安装memcached_gateway组件"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh memcached_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件memcached_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/memcached_gateway.yml
+    echo '修改domain'
+    sed -i '/cloud_controller_uri:/{s/:.*$/: api.$4/}' \$cc_config
+    echo '修改ip_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'ip_route=\$local_route'
+    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! \$(cat \$comp_file | grep memcached_gateway) ]]; then
+        sed -i '/components/{s/]/,\"memcached_gateway\"]/}' \$comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动memcached_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start memcached_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    wait
+
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
+# 安装memcached服务
+function install_memcached {
+    if [[ $# != 2 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
+        exit 1
+    fi
+    echo "log install_memcached -- 开始安装memcached服务"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install/misc/memcached
+    echo "log install_memcached -- 开始安装memcached"
+    sudo sh -c './install_memcached.sh >/dev/null'
+    echo 'memcached安装成功...'
+    wait
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
+# 安装memcached_node组件
+function memcached_node {
+    if [[ $# != 3 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
+        exit 1
+    fi
+    echo "log memcached_node -- 开始安装memcached_node组件"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh memcached_node >/dev/null
+    wait
+
+    echo '开始编辑配置文件memcached_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/memcached_node.yml
+    echo '修改ip_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'ip_route=\$local_route'
+    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '修改memcached_server_path'
+    sed -i '/postgresql:/{n; s/:.*$/: $4/}' \$cc_config
+    sed -i "/memcached_server_path:/{s/:.*$/: \\/home\\/orchard\\/memcached\\/bin\\/memcached/}" \$cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! \$(cat \$comp_file | grep memcached_node) ]]; then
+        sed -i '/components/{s/]/,\"memcached_node\"]/}' \$comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动memcached_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start memcached_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
 # 安装mango
 function mango {
     if [[ $# != 4 ]]; then
@@ -907,6 +1049,11 @@ echo $deas_ip
 #    install_postgresql "$pg_ip" "$nfs_server_ip"
 #    postgresql_node "$pg_ip" "$nfs_server_ip" "$nats_ip" "$pg_ip"
 #done
+memcached_gateway "$memcached_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+for mm_ip in "$memcached_nodes_ip"; do
+    install_memcached "$mm_ip" "$nfs_server_ip"
+    memcached_node "$mm_ip" "$nfs_server_ip" "$nats_ip"
+done
 #mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
 #bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
 
