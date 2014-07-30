@@ -740,6 +740,207 @@ function redis_node {
     echo 'redis_node安装成功'
 }
 
+# 安装mongodb_gateway组件
+function mongodb_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log mongodb_gateway -- 开始安装mongodb_gateway组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh mongodb_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件mongodb_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/mongodb_gateway.yml
+    echo '修改domain'
+    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'mongodb_gateway') ]]; then
+        sed -i '/components/{s/]/,"mongodb_gateway"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动mongodb_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start mongodb_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    echo 'mongodb_gateway安装成功'
+}
+
+# 安装mongodb服务
+function install_mongodb {
+    if [[ $# != 2 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
+        exit 1
+    fi
+    echo "log install_mongodb -- 开始安装mongodb"
+    if [[ ! $(ps aux |grep -v grep |grep -w mongod) ]]; then
+        cd /home/orchard/nfs/wingarden_install/misc/mongodb
+        sudo sh -c './install_mongodb.sh >/dev/null'
+    fi
+    echo 'mongodb安装成功...'
+}
+
+# 安装mongodb_node组件
+function mongodb_node {
+    if [[ $# != 3 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
+        exit 1
+    fi
+    echo "log mongodb_node -- 开始安装mongodb_node组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh mongodb_node >/dev/null
+    wait
+
+    echo '开始编辑配置文件mongodb_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/mongodb_node.yml
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '修改mongod_path'
+    sed -i "/mongod_path:/{n;s/:.*$/: \"\/home\/orchard\/mongodb\/bin\/mongod\"/}" $cc_config
+    echo '修改mongorestore_path'
+    sed -i "/mongorestore_path:/{n;s/:.*$/: \"\/home\/orchard\/mongodb\/bin\/mongorestore\"/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'mongodb_node') ]]; then
+        sed -i '/components/{s/]/,"mongodb_node"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动mongodb_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start mongodb_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    echo 'mongodb_node安装成功'
+}
+
+# 安装rabbitmq_gateway组件
+function rabbitmq_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log rabbitmq_gateway -- 开始安装rabbitmq_gateway组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh rabbitmq_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件rabbitmq_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/rabbitmq_gateway.yml
+    echo '修改domain'
+    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '修改默认配额'
+    sed -i '/version_aliases/{n;a\  mem_default_quota: 128\n  disk_default_quota: 128
+    }' $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'rabbitmq_gateway') ]]; then
+        sed -i '/components/{s/]/,"rabbitmq_gateway"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动rabbitmq_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start rabbitmq_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    echo 'rabbitmq_gateway安装成功'
+}
+
+# 安装rabbitmq服务
+function install_rabbitmq {
+    if [[ $# != 2 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
+        exit 1
+    fi
+    echo "log install_rabbitmq -- 开始安装rabbitmq"
+    cd /home/orchard/nfs/wingarden_install/misc/rabbitmq
+    sudo sh -c './install_rabbitmq.sh >/dev/null'
+    echo 'rabbitmq安装成功...'
+}
+
+# 安装rabbitmq_node组件
+function rabbitmq_node {
+    if [[ $# != 3 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
+        exit 1
+    fi
+    echo "log rabbitmq_node -- 开始安装rabbitmq_node组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh rabbitmq_node >/dev/null
+    wait
+
+    echo '开始编辑配置文件rabbitmq_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/rabbitmq_node.yml
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '修改rabbitmq_server'
+    sed -i "/rabbitmq_server:/{s/:.*$/: \/home\/orchard\/rabbitmq\/2.8.7\/sbin\/rabbitmq-server/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'rabbitmq_node') ]]; then
+        sed -i '/components/{s/]/,"rabbitmq_node"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动rabbitmq_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start rabbitmq_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    echo 'rabbitmq_node安装成功'
+}
+
 # 安装mango
 function mango {
     if [[ $# != 4 ]]; then
@@ -869,6 +1070,16 @@ redis_gateway "$redis_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
 for rd_ip in "$redis_nodes_ip"; do
     install_redis "$rd_ip" "$nfs_server_ip"
     redis_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
+done
+mongodb_gateway "$mongodb_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+for rd_ip in "$mongodb_nodes_ip"; do
+    install_mongodb "$rd_ip" "$nfs_server_ip"
+    mongodb_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
+done
+rabbitmq_gateway "$rabbitmq_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+for rd_ip in "$rabbitmq_nodes_ip"; do
+    install_rabbitmq "$rd_ip" "$nfs_server_ip"
+    rabbitmq_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
 done
 mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
 bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
