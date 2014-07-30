@@ -756,6 +756,134 @@ function postgresql_node {
     "
 }
 
+# 安装oracle_gateway组件
+function oracle_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log oracle_gateway -- 开始安装oracle_gateway组件"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh oracle_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件oracle_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/oracle_gateway.yml
+    echo '修改domain'
+    sed -i '/cloud_controller_uri:/{s/:.*$/: api.$4/}' \$cc_config
+    echo '修改ip_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'ip_route=\$local_route'
+    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '加入默认配额项'
+    sed -i '/service:/a\\  default_quota: 25\\n  disk_default_quota: 128' \$cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! \$(cat \$comp_file | grep oracle_gateway) ]]; then
+        sed -i '/components/{s/]/,\"oracle_gateway\"]/}' \$comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动oracle_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start oracle_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    wait
+
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
+# 安装oracle数据库
+function install_oracle {
+    echo 'install oracle. todo...'
+}
+
+# 安装oracle_node组件
+function oracle_node {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip oracle_ip"
+        exit 1
+    fi
+    echo "log oracle_node -- 开始安装oracle_node组件"
+    ssh -l orchard "$1" "
+    echo '成功登录$1 ，现在开始挂载NFS服务器目录'
+    echo '建立客户端的NFS挂载目录'
+    if [[ ! -d '/home/orchard/nfs' ]]; then 
+        mkdir /home/orchard/nfs
+    else echo 'nfs目录存在无需再创建'
+    fi
+    sudo mount -t nfs $2:/home/public /home/orchard/nfs
+    echo '挂载结果: $?'
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh oracle_node >/dev/null
+    wait
+
+    echo '安装Oracle instant client'
+    cd /home/orchard/wingarden_install/
+    sudo dpkg -ipkg/libaio1_0.3.109-2ubuntu1_amd64.deb
+    unzip misc/oracle/instantclient-basic-linux.x64-11.2.0.3.0.zip -d /home/orchard
+    unzip misc/oracle/instantclient-sdk-linux.x64-11.2.0.3.0.zip -d /home/orchard
+    sudo ln -s /home/orchard/instantclient_11_2/libclntsh.so.11.1 /usr/lib/libclntsh.so.11.1
+    sudo ln -s /home/orchard/instantclient_11_2/libnnz11.so /usr/lib/libnnz11.so
+
+    echo '开始编辑配置文件oracle_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/oracle_node.yml
+    echo '修改ip_route'
+    local_route=\$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print \$2}')
+    echo 'ip_route=\$local_route'
+    sed -i \"/ip_route:/{s/: .*$/: \$local_route/}\" \$cc_config
+    echo '修改nats的IP地址'
+    sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
+    echo '修改oracle数据库IP地址'
+    sed -i '/oracle:/{n; s/:.*$/: $4/}' \$cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! \$(cat \$comp_file | grep oracle_node) ]]; then
+        sed -i '/components/{s/]/,\"oracle_node\"]/}' \$comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! \$(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i \"s#.\\\$#:\${ruby_path}&#\" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动oracle_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start oracle_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    cd ~
+    echo '结束后卸载nfs';
+    sudo umount -f -l /home/orchard/nfs;
+    echo '卸载结果... $?';
+    "
+}
+
 # 安装memcached_gateway组件
 function memcached_gateway {
     if [[ $# != 4 ]]; then
@@ -1715,6 +1843,11 @@ for pg_ip in "$postgresql_nodes_ip"; do
     install_postgresql "$pg_ip" "$nfs_server_ip"
     postgresql_node "$pg_ip" "$nfs_server_ip" "$nats_ip" "$pg_ip"
 done
+oracle_gateway "$oracle_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+for pg_ip in "$oracle_nodes_ip"; do
+    install_oracle "$pg_ip" "$nfs_server_ip"
+    oracle_node "$pg_ip" "$nfs_server_ip" "$nats_ip" "$pg_ip"
+done
 memcached_gateway "$memcached_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
 for mm_ip in "$memcached_nodes_ip"; do
     install_memcached "$mm_ip" "$nfs_server_ip"
@@ -1737,12 +1870,10 @@ for rd_ip in "$rabbitmq_nodes_ip"; do
 done
 cloud9_gateway "$cloud9_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
 for rd_ip in "$cloud9_nodes_ip"; do
-    install_cloud9 "$rd_ip" "$nfs_server_ip"
     cloud9_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
 done
 svn_gateway "$svn_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
 for rd_ip in "$svn_nodes_ip"; do
-    install_svn "$rd_ip" "$nfs_server_ip"
     svn_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
 done
 mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
