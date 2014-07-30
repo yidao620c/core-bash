@@ -941,6 +941,185 @@ function rabbitmq_node {
     echo 'rabbitmq_node安装成功'
 }
 
+# 安装cloud9_gateway组件
+function cloud9_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log cloud9_gateway -- 开始安装cloud9_gateway组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh cloud9_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件cloud9_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/cloud9_gateway.yml
+    echo '修改domain'
+    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'cloud9_gateway') ]]; then
+        sed -i '/components/{s/]/,"cloud9_gateway"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动cloud9_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start cloud9_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    echo 'cloud9_gateway安装成功'
+}
+
+# 安装cloud9_node组件
+function cloud9_node {
+    if [[ $# != 3 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
+        exit 1
+    fi
+    echo "log cloud9_node -- 开始安装cloud9_node组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh cloud9_node >/dev/null
+    wait
+
+    echo '开始编辑配置文件cloud9_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/cloud9_node.yml
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'cloud9_node') ]]; then
+        sed -i '/components/{s/]/,"cloud9_node"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动cloud9_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start cloud9_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    echo 'cloud9_node安装成功'
+}
+
+# 安装svn_gateway组件
+function svn_gateway {
+    if [[ $# != 4 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip domain_name"
+        exit 1
+    fi
+    echo "log svn_gateway -- 开始安装svn_gateway组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh svn_gateway >/dev/null
+    wait
+
+    echo '开始编辑配置文件svn_gateway.yml'
+    cc_config=/home/orchard/cloudfoundry/config/svn_gateway.yml
+    echo '修改domain'
+    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '修改svn_url'
+    sed -i "/svn_url:/{s/:.*$/: svn.$4/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'svn_gateway') ]]; then
+        sed -i '/components/{s/]/,"svn_gateway"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动svn_gateway'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev start svn_gateway
+    wait
+    echo '查看状态'
+    /home/orchard/cloudfoundry/vcap/dev_setup/bin/vcap_dev status
+    echo 'svn_gateway安装成功'
+}
+
+# 安装svn_node组件
+function svn_node {
+    if [[ $# != 3 ]]; then
+        echo "请输入正确的IP地址参数: localhost_ip nfs_ip nats_ip"
+        exit 1
+    fi
+    echo "log svn_node -- 开始安装svn_node组件"
+    cd /home/orchard/nfs/wingarden_install
+    ./install.sh svn_node >/dev/null
+    wait
+    echo '安装svn依赖包'
+    sudo apt-get install -y apache2 subversion libapache2-svn
+    sudo a2enmod dav_svn
+    sudo a2enmod authz_svn
+    cd /etc/apache2
+    sudo sed -i '/^Listen 80$/c\Listen 8090' ports.conf
+    sudo sed -i 's/80/8090/g' sites-available/default
+    sudo sed -i '/export APACHE_RUN_USER/c\export APACHE_RUN_USER=orchard' envvars
+    sudo sed -i '/export APACHE_RUN_GROUP/c\export APACHE_RUN_USER=orchard' envvars
+    echo '复制svn对apache的配置文件'
+    sudo cp ~/cloudfoundry/svnbase/config/dav_svn.conf mods-available/
+
+    echo '开始编辑配置文件svn_node.yml'
+    cc_config=/home/orchard/cloudfoundry/config/svn_node.yml
+    echo '修改ip_route'
+    local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
+    echo "ip_route=$local_route"
+    sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
+    echo '修改nats的IP地址'
+    sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '替换完成了。。。。。。。。。'
+
+    echo '开始往vcap_components文件中加入'
+    comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
+    if [[ ! $(cat $comp_file | grep 'svn_node') ]]; then
+        sed -i '/components/{s/]/,"svn_node"]/}' $comp_file
+    fi
+    echo 'ruby加入environment'
+    if [[ ! $(cat /etc/environment |grep ruby) ]]; then
+        ruby_path=/home/orchard/language/ruby19/bin
+        sudo sed -i "s#.\$#:${ruby_path}&#" /etc/environment
+    fi
+    . /etc/environment
+    echo '启动svn_node'
+    cd /home/orchard/cloudfoundry/vcap/dev_setup/bin
+    ./vcap_dev start svn_node
+    echo '查看状态'
+    ./vcap_dev status
+
+    echo 'svn_node安装成功'
+}
+
 # 安装mango
 function mango {
     if [[ $# != 4 ]]; then
@@ -1080,6 +1259,16 @@ rabbitmq_gateway "$rabbitmq_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_nam
 for rd_ip in "$rabbitmq_nodes_ip"; do
     install_rabbitmq "$rd_ip" "$nfs_server_ip"
     rabbitmq_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
+done
+cloud9_gateway "$cloud9_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+for rd_ip in "$cloud9_nodes_ip"; do
+    install_cloud9 "$rd_ip" "$nfs_server_ip"
+    cloud9_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
+done
+svn_gateway "$svn_gateway_ip" "$nfs_server_ip" "$nats_ip" "$domain_name"
+for rd_ip in "$svn_nodes_ip"; do
+    install_svn "$rd_ip" "$nfs_server_ip"
+    svn_node "$rd_ip" "$nfs_server_ip" "$nats_ip"
 done
 mango "$mango_ip" "$nfs_server_ip" "$sysdb_ip" "$domain_name"
 bind_domain "$cloud_controller_ip" "$nfs_server_ip" "$cloud_controller_ip" "$domain_name"
