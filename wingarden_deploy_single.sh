@@ -603,12 +603,12 @@ function oracle_node {
     wait
 
     echo '安装Oracle instant client'
-    cd /home/orchard/wingarden_install/
-    sudo dpkg -ipkg/libaio1_0.3.109-2ubuntu1_amd64.deb
-    unzip misc/oracle/instantclient-basic-linux.x64-11.2.0.3.0.zip -d /home/orchard
-    unzip misc/oracle/instantclient-sdk-linux.x64-11.2.0.3.0.zip -d /home/orchard
-    sudo ln -s /home/orchard/instantclient_11_2/libclntsh.so.11.1 /usr/lib/libclntsh.so.11.1
-    sudo ln -s /home/orchard/instantclient_11_2/libnnz11.so /usr/lib/libnnz11.so
+    cd /home/orchard/nfs/wingarden_install/
+    #sudo dpkg -ipkg/libaio1_0.3.109-2ubuntu1_amd64.deb
+    #unzip misc/oracle/instantclient-basic-linux.x64-11.2.0.3.0.zip -d /home/orchard
+    #unzip misc/oracle/instantclient-sdk-linux.x64-11.2.0.3.0.zip -d /home/orchard
+    #sudo ln -s /home/orchard/instantclient_11_2/libclntsh.so.11.1 /usr/lib/libclntsh.so.11.1
+    #sudo ln -s /home/orchard/instantclient_11_2/libnnz11.so /usr/lib/libnnz11.so
 
     echo '开始编辑配置文件oracle_node.yml'
     cc_config=/home/orchard/cloudfoundry/config/oracle_node.yml
