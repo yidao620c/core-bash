@@ -1062,6 +1062,9 @@ function cloud9_gateway {
     sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
     echo '替换完成了。。。。。。。。。'
 
+    echo '修改源码，加入cloud9和svn依赖'
+    sed -i 's/oracle)/oracle cloud9 svn)/g' /home/orchard/cloudfoundry/vcap/dev_setup/lib/vcap_components.rb
+
     echo '开始往vcap_components文件中加入'
     comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
     if [[ ! $(cat $comp_file | grep 'cloud9_gateway') ]]; then
@@ -1146,6 +1149,9 @@ function svn_gateway {
     echo '修改svn_url'
     sed -i "/svn_url:/{s/:.*$/: svn.$4/}" $cc_config
     echo '替换完成了。。。。。。。。。'
+
+    echo '修改源码，加入cloud9和svn依赖'
+    sed -i 's/oracle)/oracle cloud9 svn)/g' /home/orchard/cloudfoundry/vcap/dev_setup/lib/vcap_components.rb
 
     echo '开始往vcap_components文件中加入'
     comp_file=/home/orchard/cloudfoundry/config/vcap_components.json
