@@ -1,5 +1,7 @@
 #!/bin/bash
 # wingarden全自动化部署脚本, 单独一台机器
+# author: Xiong Neng
+# date:   2014/07/16
 #
 # 安装前的准备工作：
 #    把安装包解压缩到/home/orchard/nfs
