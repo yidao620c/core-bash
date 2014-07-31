@@ -6,6 +6,7 @@
 #    也可以用nfs挂载，目前10.0.0.160可以挂载/home/public目录,里面有安装包
 #    sudo mount -t nfs 10.0.0.160:/home/public /home/orchard/nfs 
 #    把脚本和配置文件，还有python源码放到某个目录，比如/home/orchard/work
+#    orchard用户加入sudo组，然后在visudo里面把NOPASSWD放开
 #
 # 脚本运行：
 #    ./wingarden_deploy_single 10.0.0.158 wingarden.net 
@@ -356,7 +357,7 @@ function mysql_gateway {
     echo '开始编辑配置文件mysql_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/mysql_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
@@ -460,7 +461,7 @@ function postgresql_gateway {
     echo '开始编辑配置文件postgresql_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/postgresql_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
@@ -563,7 +564,7 @@ function oracle_gateway {
     echo '开始编辑配置文件oracle_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/oracle_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
@@ -661,7 +662,7 @@ function memcached_gateway {
     echo '开始编辑配置文件memcached_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/memcached_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
@@ -758,13 +759,17 @@ function redis_gateway {
     echo '开始编辑配置文件redis_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/redis_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
     sed -i "/ip_route:/{s/: .*$/: $local_route/}" $cc_config
     echo '修改nats的IP地址'
     sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
+    echo '增加默认配额'
+    if [[ ! $(cat $cc_config |grep mem_default_quota) ]]; then
+        sed -i '/current/a\  mem_default_quota: 50'  $cc_config
+    fi
     echo '替换完成了。。。。。。。。。'
 
     echo '开始往vcap_components文件中加入'
@@ -857,7 +862,7 @@ function mongodb_gateway {
     echo '开始编辑配置文件mongodb_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/mongodb_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
@@ -958,7 +963,7 @@ function rabbitmq_gateway {
     echo '开始编辑配置文件rabbitmq_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/rabbitmq_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
@@ -1058,7 +1063,7 @@ function cloud9_gateway {
     echo '开始编辑配置文件cloud9_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/cloud9_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
@@ -1144,7 +1149,7 @@ function svn_gateway {
     echo '开始编辑配置文件svn_gateway.yml'
     cc_config=/home/orchard/cloudfoundry/config/svn_gateway.yml
     echo '修改domain'
-    sed -i "/cloud_controller_uri:/{s/:.*$/: api.$4/}" $cc_config
+    sed -i "/cloud_controller_uri:/{s/: .*$/: http:\/\/api.$4/}" $cc_config
     echo '修改ip_route'
     local_route=$(netstat -rn | grep -w -E '^0.0.0.0' | awk '{print $2}')
     echo "ip_route=$local_route"
