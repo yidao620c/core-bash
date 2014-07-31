@@ -2,14 +2,19 @@
 # wingarden全自动化部署脚本, 单独一台机器
 #
 # 安装前的准备工作：
-#   把安装包解压缩到/home/orchard/nfs
-#   也可以用nfs挂载，目前10.0.0.160可以挂载/home/public目录
-#   sudo mount -t nfs 10.0.0.160:/home/public /home/orchard/nfs 
-#   把脚本和配置文件，还有python源码放到某个目录，比如/home/orchard/work
+#    把安装包解压缩到/home/orchard/nfs
+#    也可以用nfs挂载，目前10.0.0.160可以挂载/home/public目录,里面有安装包
+#    sudo mount -t nfs 10.0.0.160:/home/public /home/orchard/nfs 
+#    把脚本和配置文件，还有python源码放到某个目录，比如/home/orchard/work
 #
-# 客户端vmc测试的时候
-#   /etc/hosts文件中加入10.0.0.158 api.wingarden.net uaa.wingarden.net
-#   对于每个新建应用比如应用名为newapp，那么还要添加newapp.wingarden.net
+# 脚本运行：
+#    ./wingarden_deploy_single 10.0.0.158 wingarden.net 
+#    10.0.0.158代表本机ip，wingarden.net代表domain name
+#
+# 客户端测试
+#    /etc/hosts文件中加入10.0.0.158 api.wingarden.net uaa.wingarden.net
+#    对于每个新建应用比如应用名为newapp，那么还要添加newapp.wingarden.net
+#    使用vmc和mango网页测试均可，网页mango测试地址 http://10.0.0.158:8088
 
 set -e
 

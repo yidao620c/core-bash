@@ -12,13 +12,8 @@
 #   其他机器 已经安装了rpcbind和nfs-common这两个软件
 #   其他机器 将NFS服务器上的pub_key一个个的加入authorized_keys文件中
 #
-# 安装后的处理工作(这个脚本已经自动做了)：
-#   如果没有DNS，那么在/etc/hosts文件中加入10.0.0.158 api.wingarden.net uaa.wingarden.net
-#   cloud_controller数据库清空static_routes
-#   uaa数据库将oauth_client_details表中client_id=simple和vmc的两行里面
-#   web_server_redirect_uri更新为：http://uaa.wingarden.net/redirect/vmc,https://uaa.wingarden.net/redirect/vmc
 #
-# 客户端vmc测试的时候
+# 客户端测试的时候
 #   /etc/hosts文件中加入10.0.0.158 api.wingarden.net uaa.wingarden.net
 #   对于每个新建应用比如应用名为newapp，那么还要添加newapp.wingarden.net
 
