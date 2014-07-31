@@ -23,25 +23,19 @@ set -e
 
 function install_python {
     echo '开始安装python3环境'
+    sudo apt-get install -y gcc make
     pwd_dir=$(pwd)
-    if [[ ! $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
+    if [[ ! -f /usr/bin/python3 ]]; then
+        echo 'start install python3...'
         sudo apt-get install -y libreadline6-dev
         tar -jxv -f Python-3.3.0.tar.bz2
         cd Python-3.3.0
         ./configure
         sudo make install
         wait
-        sudo mv /usr/bin/python /usr/bin/python2.6.6
-        sudo ln -s /usr/local/bin/python3 /usr/bin/python
-        echo 'python 版本不是3，开始安装....'
-        echo 'start install python3...'
+        sudo ln -s /usr/local/bin/python3 /usr/bin/python3
     fi
-    if [[ $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
-        echo 'python3安装成功'
-    else
-        echo 'python3安装失败'
-        exit 1
-    fi
+    echo 'python3安装成功'
     echo '开始安装psycopg2包'
     sudo apt-get remove -y libpq-dev
     sudo apt-get install -y python-psycopg2
