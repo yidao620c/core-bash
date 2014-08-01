@@ -21,23 +21,18 @@ set -e
 
 function install_python {
     echo '开始安装python3环境'
-    if [[ ! $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
+    sudo yum install -y gcc make
+    if [[ ! -f /usr/bin/python3 ]]; then
+        echo 'python 版本不是3，开始安装....'
+        echo 'start install python3...'
         sudo yum install -y zlib-devel bzip2-devel openssl-devel ncurses-devel
         tar -jxv -f Python-3.3.0.tar.bz2
         cd Python-3.3.0
         ./configure
         sudo make install
         wait
-        sudo mv /usr/bin/python /usr/bin/python2.6.6
-        sudo ln -s /usr/local/bin/python3 /usr/bin/python
-        echo 'python 版本不是3，开始安装....'
-        echo 'start install python3...'
-        fi  
-        if [[ $(python -V 2>&1 | awk '{print $2}' |grep 3.3.0) ]]; then
+        sudo ln -s /usr/local/bin/python3 /usr/bin/python3
         echo 'python3安装成功'
-        else
-        echo 'python3安装失败'
-        exit 1
     fi  
     echo '开始安装yaml包'
     tar -zxvf PyYAML-3.11.tar.gz
@@ -69,6 +64,10 @@ function sysdb {
     fi
     sudo mount -t nfs $2:/home/public /home/orchard/nfs
     echo '挂载结果: $?'
+    if [[ \$(sudo netstat -tnlp |grep 5432) ]]; then
+        postpid=\$(sudo netstat -tnlp |grep 5432 |awk 'NR==1 {print \$7}' |awk -F/ '{print \$1}')
+        sudo kill -9 \$postpid
+    fi
     cd /home/orchard/nfs/wingarden_install
     ./install.sh sysdb >/dev/null
     wait
@@ -77,12 +76,6 @@ function sysdb {
         echo 'postgresql status is running...'
     else
         echo 'Oh, No,,,postgresql wrong.'
-        exit 1
-    fi
-    if [[ \$(sudo /etc/init.d/vcap_redis status | grep 'is running') ]]; then
-        echo 'vcap_redis is running..'
-    else
-        echo 'Oh no, vcap_redis is wrong.'
         exit 1
     fi
     
@@ -135,7 +128,7 @@ function gorouter {
     echo "log gorouter -- 开始部署gorouter"
     ssh -l orchard "$1" "
     echo '先安装go的编译环境依赖'
-    sudo apt-get install -y git mercurial bzr build-essential 1>/dev/null 2>&1
+    sudo aptitude install -y git mercurial bzr build-essential 1>/dev/null 2>&1
     wait
     echo '开始挂载nfs服务器'
     echo '建立客户端的NFS挂载目录'
@@ -633,7 +626,9 @@ function postgresql_gateway {
     echo '修改nats的IP地址'
     sed -i '/mbus:/{s/@.*:/@$3:/}' \$cc_config
     echo '加入默认配额项'
-    sed -i '/service:/a\\  default_quota: 25\\n  disk_default_quota: 128' \$cc_config
+    if [[ ! \$(cat \$cc_config |grep disk_default_quota) ]]; then
+        sed -i '/service:/a\\  default_quota: 25\\n  disk_default_quota: 128' \$cc_config
+    fi
     echo '替换完成了。。。。。。。。。'
 
     echo '开始往vcap_components文件中加入'
@@ -684,9 +679,8 @@ function install_postgresql {
         cd /home/orchard/nfs/wingarden_install/misc/postgresql
         sudo sh -c './install_postgresql.sh >/dev/null'
         echo 'postgresql安装成功...'
-    else
-        echo 'postgresql已经安装...'
     fi
+
     wait
     cd ~
     echo '结束后卸载nfs';
@@ -1099,10 +1093,8 @@ function install_redis {
     echo '挂载结果: $?'
     cd /home/orchard/nfs/wingarden_install/misc/redis
     echo 'log install_redis -- 开始安装redis'
-    if [[ ! \$(ps aux |grep -v grep |grep -w redis-server) ]]; then
-        cd /home/orchard/nfs/wingarden_install/misc/redis
-        sudo sh -c './install_redis.sh >/dev/null'
-    fi
+    cd /home/orchard/nfs/wingarden_install/misc/redis
+    sudo sh -c './install_redis.sh >/dev/null'
     echo 'redis安装成功...'
     wait
     cd ~
@@ -1656,7 +1648,7 @@ function svn_node {
     wait
 
     echo '安装svn依赖包'
-    sudo apt-get install -y apache2 subversion libapache2-svn
+    sudo aptitude install -y apache2 subversion libapache2-svn
     sudo a2enmod dav_svn
     sudo a2enmod authz_svn
     cd /etc/apache2
@@ -1777,7 +1769,7 @@ function bind_domain {
 
     echo '开始编辑配置文件hosts'
     if [[ ! \$(cat /etc/hosts |grep $4) ]]; then
-        sudo sed -i '\$a $3 api.$4 uaa.$4' /etc/hosts
+        sudo sed -i '\$ a $3 api.$4 uaa.$4' /etc/hosts
     fi
 
     cd ~

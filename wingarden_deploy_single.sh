@@ -23,11 +23,11 @@ set -e
 
 function install_python {
     echo '开始安装python3环境'
-    sudo apt-get install -y gcc make
+    sudo aptitude install -y gcc make
     pwd_dir=$(pwd)
     if [[ ! -f /usr/bin/python3 ]]; then
         echo 'start install python3...'
-        sudo apt-get install -y libreadline6-dev
+        sudo aptitude install -y libreadline6-dev
         tar -jxv -f Python-3.3.0.tar.bz2
         cd Python-3.3.0
         ./configure
@@ -37,9 +37,9 @@ function install_python {
     fi
     echo 'python3安装成功'
     echo '开始安装psycopg2包'
-    sudo apt-get remove -y libpq-dev
-    sudo apt-get install -y python-psycopg2
-    sudo apt-get install -y libpq-dev python-dev
+    sudo aptitude remove -y libpq-dev
+    sudo aptitude install -y python-psycopg2
+    sudo aptitude install -y libpq-dev python-dev
     cd $pwd_dir
     tar -zxvf psycopg2-2.5.3.tar.gz >/dev/null
     cd psycopg2-2.5.3/
@@ -49,6 +49,10 @@ function install_python {
 
 function sysdb {
     echo "log sysdb -- 开始部署系统数据库pgsql"
+    if [[ $(sudo netstat -tnlp |grep 5432) ]]; then
+        postpid=$(sudo netstat -tnlp |grep 5432 |awk 'NR==1 {print $7}' |awk -F/ '{print $1}')
+        sudo kill -9 "$postpid"
+    fi
     cd /home/orchard/nfs/wingarden_install
     ./install.sh sysdb >/dev/null
     wait
@@ -91,7 +95,7 @@ function gorouter {
     fi
     echo "log gorouter -- 开始部署gorouter"
     echo '先安装go的编译环境依赖'
-    sudo apt-get install -y git mercurial bzr build-essential 1>/dev/null 2>&1
+    sudo aptitude install -y git mercurial bzr build-essential 1>/dev/null 2>&1
     wait
     cd /home/orchard/nfs/wingarden_install/router
     tar -zxvf gorouter.tar.gz -C /home/orchard 1>/dev/null
@@ -465,7 +469,9 @@ function postgresql_gateway {
     echo '修改nats的IP地址'
     sed -i "/mbus:/{s/@.*:/@$3:/}" $cc_config
     echo '加入默认配额项'
-    sed -i "/service:/a\  default_quota: 25\n  disk_default_quota: 128" $cc_config
+    if [[ ! $(cat $cc_config |grep disk_default_quota) ]]; then
+        sed -i "/service:/a\  default_quota: 25\n  disk_default_quota: 128" $cc_config
+    fi
     echo '替换完成了。。。。。。。。。'
 
     echo '开始往vcap_components文件中加入'
@@ -493,14 +499,12 @@ function install_postgresql {
         echo "请输入正确的IP地址参数: localhost_ip nfs_ip"
         exit 1
     fi
+    echo "log install_postgresql -- 开始安装postgresql数据库"
     if [[ ! $(ps aux |grep -v grep |grep -w postgres) ]]; then
-        echo "log install_postgresql -- 开始安装postgresql数据库"
         cd /home/orchard/nfs/wingarden_install/misc/postgresql
         sudo sh -c './install_postgresql.sh >/dev/null'
-        echo 'postgresql安装成功...'
-    else
-        echo 'postgresql已经安装...'
     fi
+    echo 'postgresql安装成功...'
 }
 
 # 安装postgresql_node组件
@@ -794,10 +798,8 @@ function install_redis {
         exit 1
     fi
     echo "log install_redis -- 开始安装redis"
-    if [[ ! $(ps aux |grep -v grep |grep -w redis-server) ]]; then
-        cd /home/orchard/nfs/wingarden_install/misc/redis
-        sudo sh -c './install_redis.sh >/dev/null'
-    fi
+    cd /home/orchard/nfs/wingarden_install/misc/redis
+    sudo sh -c './install_redis.sh >/dev/null'
     echo 'redis安装成功...'
 }
 
@@ -1189,7 +1191,7 @@ function svn_node {
     ./install.sh svn_node >/dev/null
     wait
     echo '安装svn依赖包'
-    sudo apt-get install -y apache2 subversion libapache2-svn
+    sudo aptitude install -y apache2 subversion libapache2-svn
     sudo a2enmod dav_svn
     sudo a2enmod authz_svn
     cd /etc/apache2
@@ -1283,7 +1285,7 @@ function bind_domain {
     echo "log bind_domain -- 开始绑定域名ip"
     echo '开始编辑配置文件hosts'
     if [[ ! $(cat /etc/hosts |grep "$4") ]]; then
-        sudo sed -i "$a $3 api.$4 uaa.$4" /etc/hosts
+        sudo sed -i "$ a $3 api.$4 uaa.$4" /etc/hosts
     fi
     echo 'bind_domain成功...'
 }
