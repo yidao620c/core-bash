@@ -1001,6 +1001,11 @@ function install_rabbitmq {
     echo "log install_rabbitmq -- 开始安装rabbitmq"
     cd /home/orchard/nfs/wingarden_install/misc/rabbitmq
     sudo sh -c './install_rabbitmq.sh >/dev/null'
+    echo 'erl加入path'
+    if [[ ! $(cat /etc/profile |grep erlang) ]]; then
+       sudo sh -c 'echo "/opt/erlang/otp_r15b02/bin:$PATH" >> /etc/profile' 
+       source /etc/profile
+    fi
     echo 'rabbitmq安装成功...'
 }
 
