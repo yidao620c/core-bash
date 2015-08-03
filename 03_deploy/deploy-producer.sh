@@ -15,7 +15,7 @@ log4j_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classe
 sed -i "/^log4j.appender.toFile.file=/ c log4j.appender.toFile.file=/var/log/fastloan/fastloan-producer.log" $log4j_config
 sed -i "/log4j.threshold/ c log4j.threshold=INFO" $log4j_config
 common_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classes/config.properties'
-sed -i "/^jms.broker.url=/ c tcp://192.168.200.33:61616" $common_config
+sed -i "/^jms.broker.url=/ c jms.broker.url=tcp://192.168.200.33:61616" $common_config
 sed -i "/^jms.queue.name=/ c jms.queue.name=DATA.INVOICE" $common_config
 sed -i "/^upload.path=/ c upload.path=/var/data/files/" $common_config
 sed -i "/^download_dir=/ c download_dir=/var/data/" $common_config
