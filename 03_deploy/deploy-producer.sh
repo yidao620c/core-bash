@@ -20,8 +20,9 @@ sed -i "/^jms.queue.name=/ c jms.queue.name=DATA.INVOICE" $common_config
 sed -i "/^upload.path=/ c upload.path=/var/data/files/" $common_config
 sed -i "/^download_dir=/ c download_dir=/var/data/" $common_config
 echo "重启tomcat服务器"
-/home/winhong/lib/apache-tomcat-8.0.24/bin/catalina.sh start 1> /dev/null 2>&1 &
+/home/winhong/lib/apache-tomcat-8.0.24/bin/catalina.sh start 1> /dev/null 2>&1 
 
 echo "完成发布fastloan-producer"
 
 
+exit 0

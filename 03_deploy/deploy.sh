@@ -42,12 +42,28 @@ mv target/fastloan-consumer.jar ../zips/
 cd ..
 echo "更新工程fastloan-consumer结束"
 
+echo "更新工程fastloan-crawler开始"
+cd fastloan-crawler
+svn update --username licf --password lcf0623
+mvn clean && mvn package -DskipTests=true
+mv target/fastloan-crawler.jar ../zips/
+cd ..
+echo "更新工程fastloan-crawler结束"
+
+echo "更新工程fastloan-datamsg-consumer开始"
+cd fastloan-datamsg-consumer
+svn update --username licf --password lcf0623
+mvn clean && mvn package -DskipTests=true
+mv target/fastloan-datamsg-consumer.jar ../zips/
+cd ..
+echo "更新工程fastloan-datamsg-consumer结束"
+
 echo "开始向服务器传输最新的包开始"
 ssh -p 10001 winhong@183.232.56.59 'rm -rf /home/orchard/deploy/zips/*'
 scp -P 10001 zips/* winhong@183.232.56.59:/home/winhong/work/zips/
 echo "开始向服务器传输最新的包结束"
 
 echo "执行远程服务器上面的重新部署脚本"
-ssh -p 10001 winhong@183.232.56.59 '/home/winhong/work/deploy-all.sh'
+ssh -p 10001 -tt winhong@183.232.56.59 '/home/winhong/work/deploy-all.sh'
 echo "完成，请耐心等待服务器自动部署成功..."
 

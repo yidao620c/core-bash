@@ -14,4 +14,4 @@ java -jar /home/winhong/work/fastloan-datamsg-consumer.jar 1> /dev/null 2>&1 &
 
 echo "完成发布fastloan-datamsg-consumer"
 
-
+exit 0

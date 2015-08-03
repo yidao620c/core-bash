@@ -15,6 +15,8 @@ log4j_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classe
 sed -i "/^log4j.appender.toFile.file=/ c log4j.appender.toFile.file=/var/log/fastloan/fastloan3-back.log" $log4j_config
 sed -i "/log4j.threshold/ c log4j.threshold=INFO" $log4j_config
 echo "重启tomcat服务器"
-/home/winhong/lib/apache-tomcat-8.0.24/bin/catalina.sh start 1> /dev/null 2>&1 &
+/home/winhong/lib/apache-tomcat-8.0.24/bin/catalina.sh start 1> /dev/null 2>&1 
 
 echo "完成发布fastloan3-back"
+
+exit 0
