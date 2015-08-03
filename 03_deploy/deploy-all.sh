@@ -1,7 +1,5 @@
 #!/bin/bash
 # linux 贷快发生产环境自动发布脚本
-# 这个脚本放在生产环境的可使用公网地址SSH访问的机器上面
-# 我这里是DKF-web-1，IP地址为：183.232.56.59，端口为10001
 
 echo "开始发布fastloan3-front"
 echo "先kill tomcat进程..."
@@ -18,6 +16,9 @@ jdbc_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classes
 sed -i "/^jdbc.url=/ c jdbc.url=jdbc:mysql://192.168.200.33:3306/fastloan3?useUnicode=true&characterEncoding=utf8" $jdbc_config
 log4j_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classes/log4j.properties'
 sed -i "/^log4j.appender.toFile.file=/ c log4j.appender.toFile.file=/var/log/fastloan/fastloan3-front.log" $log4j_config
+sed -i "/log4j.threshold/ c log4j.threshold=INFO" $log4j_config
+msg_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classes/msg.properties'
+sed -i "/^jms_broker_url/ c jms_broker_url=tcp://192.168.200.33:61616" $msg_config
 echo "重启tomcat服务器"
 /home/winhong/lib/apache-tomcat-8.0.24/bin/catalina.sh start 1> /dev/null 2>&1 &
 
@@ -26,6 +27,8 @@ echo "完成发布fastloan3-front"
 ssh winhong@192.168.200.31 $(cat deploy-back.sh)
 ssh winhong@192.168.200.32 $(cat deploy-producer.sh)
 ssh winhong@192.168.200.34 $(cat deploy-consumer.sh)
+ssh winhong@192.168.200.34 $(cat deploy-crawler.sh)
+ssh winhong@192.168.200.34 $(cat deploy-datamsg-consumer.sh)
 
 echo "全部发布完成 恭喜你 "
 

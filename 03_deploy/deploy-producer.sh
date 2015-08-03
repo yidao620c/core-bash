@@ -13,6 +13,7 @@ jdbc_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classes
 sed -i "/^jdbc.url=/ c jdbc.url=jdbc:mysql://192.168.200.33:3306/fastloan3?useUnicode=true&characterEncoding=utf8" $jdbc_config
 log4j_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classes/log4j.properties'
 sed -i "/^log4j.appender.toFile.file=/ c log4j.appender.toFile.file=/var/log/fastloan/fastloan-producer.log" $log4j_config
+sed -i "/log4j.threshold/ c log4j.threshold=INFO" $log4j_config
 common_config='/home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/WEB-INF/classes/config.properties'
 sed -i "/^jms.broker.url=/ c tcp://192.168.200.33:61616" $common_config
 sed -i "/^jms.queue.name=/ c jms.queue.name=DATA.INVOICE" $common_config
