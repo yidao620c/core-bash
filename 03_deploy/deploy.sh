@@ -59,7 +59,7 @@ cd ..
 echo "更新工程fastloan-datamsg-consumer结束"
 
 echo "开始向服务器传输最新的包开始"
-ssh -p 10001 winhong@183.232.56.59 'rm -rf /home/orchard/deploy/zips/*'
+ssh -p 10001 winhong@183.232.56.59 'rm -rf /home/winhong/deploy/zips/*'
 scp -P 10001 zips/* winhong@183.232.56.59:/home/winhong/work/zips/
 echo "开始向服务器传输最新的包结束"
 
