@@ -6,6 +6,9 @@ do
     pid="${linewords[1]}"
     sudo kill -9 $pid
 done
+echo "先备份服务器文件"
+today=`date +%Y%m%d`
+tar -jcvPf /home/winhong/work/backup/fastloan3-back-${today}.tar.bz2 /home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/*
 echo "解压覆盖文件"
 unzip -o /home/winhong/work/zips/fastloan3-back.war -d /home/winhong/lib/apache-tomcat-8.0.24/webapps/ROOT/
 echo "修改配置文件"
