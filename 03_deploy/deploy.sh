@@ -9,6 +9,13 @@
 # 5：fastloan-crawler
 # 6：fastloan-datamsg-consumer
 
+read -r -p "你确定要发布吗? y/n " response
+echo    # (optional) move to a new line
+if [[ ! $response =~ ^[Yy]$ ]]
+then
+    exit 1
+fi
+
 WORK_DIR=/home/orchard/deploy
 cd $WORK_DIR
 echo current dir is `pwd`
