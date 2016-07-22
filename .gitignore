@@ -1,7 +1,2 @@
-*.a
-!lib.a
-TODO/
-/build/
-/**/doc/*.txt
-/**/doc/**/*.txt
-README.bak
+.idea/
+*.pyc
