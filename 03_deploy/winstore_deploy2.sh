@@ -3,13 +3,21 @@
 # 在/root/winstore_xn目录里面初始化winstore和winstore-web两个svn项目即可
 # 确保安装了subversion和cifs-utils
 
+if [ "$#" -ne 1 ]; then
+    echo "Illegal number of parameters"
+    exit 1
+fi
+
 echo "先从samba服务器上面获取最新的安装包"
 mount -t cifs -o username="samba",password="samba" //10.10.161.99/public /mnt/ -o rw
 echo "$?"
 cd /mnt/winhong_ceph/winstore3.0Beta
 #file_name=$(ls -l /mnt/*_winhong_winstore3.0_installer.tar.gz | tail -n 1 |rev |cut -d" " -f1|rev| cut -d"/" -f3)
 #file_name=$(ls -l *_winhong_winstore3.0_installer*.tar.gz | tail -n 1 | rev |cut -d" " -f1|rev)
-for file_name in $(ls *_winhong_winstore3.0_installer*.tar.gz | tail -n 2); do
+os6=$(ls *_winhong_winstore3.*_installer_centos6.tar.gz | tail -n 1)
+os7=$(ls *_winhong_winstore3.*_installer_centos7.tar.gz | tail -n 1)
+declare -a names=("$os6" "$os7")
+for file_name in "${names[@]}"; do
     echo "file_name=${file_name}"
     echo "复制最新的安装包文件"
     cp "/mnt/winhong_ceph/winstore3.0Beta/${file_name}" /root/winstore_xn/
@@ -52,7 +60,7 @@ for file_name in $(ls *_winhong_winstore3.0_installer*.tar.gz | tail -n 2); do
 
     echo "最后开始打包安装包"
     new_time=$(date '+%Y%m%d')
-    new_file_name="${new_time}${file_name:8}"
+    new_file_name="${new_time}_winhong_winstore$1${file_name:28}"
     tar -zcf "${new_file_name}" winhong_winstore3.0_installer
     rm -rf winhong_winstore3.0_installer
 
