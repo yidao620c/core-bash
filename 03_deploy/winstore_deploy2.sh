@@ -14,8 +14,8 @@ echo "$?"
 cd /mnt/winhong_ceph/winstore3.0Beta
 #file_name=$(ls -l /mnt/*_winhong_winstore3.0_installer.tar.gz | tail -n 1 |rev |cut -d" " -f1|rev| cut -d"/" -f3)
 #file_name=$(ls -l *_winhong_winstore3.0_installer*.tar.gz | tail -n 1 | rev |cut -d" " -f1|rev)
-os6=$(ls *_winhong_winstore3.*_installer_centos6.tar.gz | tail -n 1)
-os7=$(ls *_winhong_winstore3.*_installer_centos7.tar.gz | tail -n 1)
+os6=$(ls *_winhong_winstore*_installer_centos6.tar.gz | tail -n 1)
+os7=$(ls *_winhong_winstore*_installer_centos7.tar.gz | tail -n 1)
 declare -a names=("$os6" "$os7")
 for file_name in "${names[@]}"; do
     echo "file_name=${file_name}"
@@ -38,7 +38,9 @@ for file_name in "${names[@]}"; do
     echo "先解压缩安装包"
     tar -zxf "${file_name}"
     rm -f "${file_name}"
-    cd winhong_winstore3.0_installer/
+    install_dir=$(ls -d winhong_winstore*_installer)
+    echo "install_dir=$install_dir"
+    cd ${install_dir}
     echo "先解压winstore两个代码压缩包"
     tar -zxf winstore_sdsom.tar.gz
     tar -zxf winstore_sdsomweb.tar.gz
@@ -47,10 +49,10 @@ for file_name in "${names[@]}"; do
 
     echo "压缩python后台代码"
     cd ..
-    /bin/cp -r winstore/* winhong_winstore3.0_installer/opt/sdsom/venv/lib/python2.6/site-packages/sdsom-2.1.0-py2.6.egg/sdsom/
-    /bin/cp -r winstore-web/sdsomweb/* winhong_winstore3.0_installer/opt/sdsom/webapp/content/sdsomweb/
+    /bin/cp -r winstore/* ${install_dir}/opt/sdsom/venv/lib/python2.6/site-packages/sdsom-2.1.0-py2.6.egg/sdsom/
+    /bin/cp -r winstore-web/sdsomweb/* ${install_dir}/opt/sdsom/webapp/content/sdsomweb/
 
-    cd winhong_winstore3.0_installer
+    cd ${install_dir}
     tar -zcf winstore_sdsom.tar.gz opt/sdsom/venv/lib/python2.6/site-packages/sdsom-2.1.0-py2.6.egg/sdsom/
     tar -zcf winstore_sdsomweb.tar.gz opt/sdsom/webapp/content/sdsomweb/
 
@@ -61,8 +63,12 @@ for file_name in "${names[@]}"; do
     echo "最后开始打包安装包"
     new_time=$(date '+%Y%m%d')
     new_file_name="${new_time}_winhong_winstore$1${file_name:28}"
-    tar -zcf "${new_file_name}" winhong_winstore3.0_installer
-    rm -rf winhong_winstore3.0_installer
+    new_install_dir="winhong_winstore$1${install_dir:19}"
+    if [ "${install_dir}" != "${new_install_dir}" ]; then
+        mv ${install_dir} ${new_install_dir}
+    fi
+    tar -zcf "${new_file_name}" "${new_install_dir}"
+    rm -rf ${new_install_dir}
 
     echo "将升级后的包上传至samba服务器"
     /bin/cp "${new_file_name}" /mnt/winhong_ceph/winstore3.0Beta/"${new_file_name}"
