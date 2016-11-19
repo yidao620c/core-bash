@@ -6,7 +6,7 @@
 
 (The Apache License)
 
-Copyright (c) 2013-2014 [WinHong, Inc.](http://www.winhong.com/) and other contributors
+Copyright (c) 2013-2016 [Xiong Neng](http://yidao620c.github.io/) and other contributors
 
 Licensed under the Apache License, Version 2.0 (the "License"); 
 you may not use this file except in compliance with the License. 
