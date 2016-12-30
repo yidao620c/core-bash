@@ -12,7 +12,7 @@ if [[ "$nic_21" != "" ]]; then
     rm -f /etc/sysconfig/network-scripts/ifcfg-$nic_21
     ifconfig | grep xenbr0
     if [[ "$?" == 0 ]]; then
-        rm -f /etc/sysconfig/network-scripts/ifcfg-$nic_21_real
+        echo "DEVICE=$nic_21_real" > /etc/sysconfig/network-scripts/ifcfg-$nic_21_real
     fi
 fi
 
@@ -22,14 +22,14 @@ if [[ "$nic_22" != "" ]]; then
     rm -f /etc/sysconfig/network-scripts/ifcfg-$nic_22
     ifconfig | grep xenbr0
     if [[ "$?" == 0 ]]; then
-        rm -f /etc/sysconfig/network-scripts/ifcfg-$nic_22_real
+        echo "DEVICE=$nic_22_real" > /etc/sysconfig/network-scripts/ifcfg-$nic_22_real
     fi
 fi
 
 # winserver网络清理
 ifconfig | grep xenbr0
 if [[ "$?" == 0 ]]; then
-    local_ip=$(ifconfig | grep -A1 xenbr0 | grep 'inet ' | awk {'print $2'})
+    local_ip=$(ifconfig | grep -A1 xenbr0 | grep 'inet ' | awk '{print $2}')
 
     eth0=$(ifconfig | grep -B1 -m1 "inet $local_ip" | awk '{print $1}' | grep ":" | sed 's/\(.*\):/\1/')
     if [[ "$eth0" != "" ]]; then

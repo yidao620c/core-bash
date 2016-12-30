@@ -16,6 +16,7 @@ cat /etc/my.cnf | grep "server_id"
 if [[ "$?" != "0" ]]; then
     sed -i '/\[mysqld\]/a\skip-name-resolve\nserver_id = 1\nlog-bin=mysql3306-bin' /etc/my.cnf
 fi
+echo "=====================systemctl restart mysqld.service==================="
 systemctl restart mysqld.service
 
 echo "================开始更新mysql配置============================"
@@ -63,12 +64,12 @@ if [[ "$slave1_ip" != "0" ]]; then
     echo "===============从表${slave1_ip}:检查slave状态是否正确输出===================="
     echo "${check_result}" | grep "Slave_IO_Running: Yes"
     if [[ "$?" != "0" ]]; then
-        echo "检查出错了。。。$slave1_ip Slave_IO_Running: Yes"
+        echo "检查出错了。。。$slave1_ip Slave_IO_Running: Yes Error"
         exit 1
     fi
     echo "${check_result}" | grep "Slave_SQL_Running: Yes"
     if [[ "$?" != "0" ]]; then
-        echo "检查出错了。。。$slave1_ip Slave_SQL_Running: Yes"
+        echo "检查出错了。。。$slave1_ip Slave_SQL_Running: Yes Error"
         exit 1
     fi
 fi
@@ -91,12 +92,12 @@ if [[ "$slave2_ip" != "0" ]]; then
     echo "===============从表${slave2_ip}:查看slave状态===================="
     check_result=$(ssh "$slave2_ip" "mysql -uroot -p${mysql_password} -e \"show slave status\G;\"")
     echo "===============从表${slave2_ip}:检查slave状态是否正确输出===================="
-    echo "${check_result}" | grep "Slave_IO_Running: Yes Error."
+    echo "${check_result}" | grep "Slave_IO_Running: Yes"
     if [[ "$?" != "0" ]]; then
         echo "检查出错了。。。$slave2_ip Slave_IO_Running: Yes Error"
         exit 1
     fi
-    echo "${check_result}" | grep "Slave_SQL_Running: Yes Error"
+    echo "${check_result}" | grep "Slave_SQL_Running: Yes"
     if [[ "$?" != "0" ]]; then
         echo "检查出错了。。。$slave2_ip Slave_SQL_Running: Yes Error"
         exit 1

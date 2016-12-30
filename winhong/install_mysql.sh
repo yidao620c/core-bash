@@ -1,8 +1,8 @@
 #!/bin/bash
 # install db on winserver/centos
-# 可配置主从复制的高可用模式，前提是先配置好ssh无密码访问
+# 可配置主从复制的高可用模式，前提是先配置好ssh无密码访问，并且关闭selinux和防火墙
 # author: Xiong Neng
-mysql_password='winstore'
+mysql_password="winstore"
 
 usage_exit() {
     echo "Usage:"
@@ -37,10 +37,18 @@ if [[ "$#" == 0 || "$#" == 1 ]]; then
     echo "没有slave，无需进行HA配置"
     exit 0
 elif [[ "$#" > 1 ]]; then
-    local_ip=$(ifconfig | grep -A1 xenbr0 | grep 'inet ' | awk {'print $2'})
+    echo "开始配置slave"
+    cat /etc/redhat-release | grep WinServer
+    if [[ "$?" == "0" ]]; then
+        local_ip=$(ifconfig | grep -A1 xenbr | grep 'inet ' | awk '{print $2}')
+    else
+        local_ip=$(hostname -I | awk '{print $1}')
+    fi
     if [[ "$#" == 2 ]]; then
-        sh /root/mysql-ansible/resource/shell/mysql_ha.sh ${local_ip} $2 0 ${mysql_password}
+        echo "sh /root/mysql-ansible/resource/shell/mysql_ha.sh ${local_ip} $2 0 ${mysql_password}"
+        sh /root/mysql-ansible/resource/shell/mysql_ha.sh ${local_ip} $2 0 "${mysql_password}"
     elif [[ "$#" -ge 3 ]]; then
-        sh /root/mysql-ansible/resource/shell/mysql_ha.sh ${local_ip} $2 $3 ${mysql_password}
+        echo "sh /root/mysql-ansible/resource/shell/mysql_ha.sh ${local_ip} $2 $3 ${mysql_password}"
+        sh /root/mysql-ansible/resource/shell/mysql_ha.sh ${local_ip} $2 $3 "${mysql_password}"
     fi
 fi

@@ -1,0 +1,63 @@
+#!/usr/bin/expect -f
+# 自动给远程的主机加上sshkey免密码登录认证
+# 另外一种更简单方式：sshpass -p "PASSWORD" ssh-copy-id -o StrictHostKeyChecking=no USERNAME@IP
+# ssh -o PasswordAuthentication=no root@192.168.212.202 exit &>/dev/null
+# sh -o StrictHostKeyChecking=no 192.168.212.202
+
+if { $argc != 2 && $argc != 3 } {
+    send_user "Usage: ./sshkey.exp ip password \n"
+    exit
+}
+
+set ip [lindex $argv 0]
+set password [lindex $argv 1]
+set username root
+set timeout 10
+
+set pubkey_file [open "~/.ssh/id_rsa.pub" r]
+set pubkey [read $pubkey_file]
+
+send_user "ip=$ip, password=$password\n"
+
+spawn ssh $username@$ip
+expect {
+    "*yes/no" { send "yes\r"; exp_continue }
+    "*password:" { send "$password\r" }
+    "*#*" { send_user "login successful.\n"; exit }
+}
+expect "*#*"
+send "ls ~/.ssh/authorized_keys\r"
+expect {
+    "*ssh/authorized_keys" { set auth_key 1; exp_continue }
+    "*No such file or directory" { set auth_key 0 }
+}
+if { "$auth_key" != "1" } {
+    send_user "Server has no authorized_keys, start to keygen\n"
+    send "ssh-keygen -t rsa\r"
+    expect {
+        "*Enter file in which to save the key*" { send "\r" }
+    }
+    expect {
+        "*Overwrite*" { send "y\r"; exp_continue }
+        "*Enter passphrase*" { send "\r" }
+    }
+    expect {
+        "*passphrase again:" { send "\r" }
+    }
+}
+send_user "start to write pubkey file\n"
+send "exit\r"
+send_user "exit successful.\n"
+
+send_user "copy pubkey file to remote.\n"
+spawn scp /root/.ssh/id_rsa.pub $username@$ip:/tmp/id_rsa.pub
+expect {
+    "*yes/no" { send "yes\r"; exp_continue }
+    "*password:" { send "$password\r" }
+}
+
+spawn ssh $username@$ip "cat /tmp/id_rsa.pub >> ~/.ssh/authorized_keys"
+expect {
+    "*password:" { send "$password\r" }
+}
+expect eof
