@@ -1,17 +1,27 @@
 #!/usr/bin/expect -f
 # 自动给远程的主机加上sshkey免密码登录认证
-# 另外一种更简单方式：sshpass -p "PASSWORD" ssh-copy-id -o StrictHostKeyChecking=no USERNAME@IP
-# ssh -o PasswordAuthentication=no root@192.168.212.202 exit &>/dev/null
-# sh -o StrictHostKeyChecking=no 192.168.212.202
+# 另外一种更简单方式：
+# sshpass -p "PASSWORD" ssh-copy-id -o StrictHostKeyChecking=no USERNAME@IP
 
-if { $argc != 2 && $argc != 3 } {
-    send_user "Usage: ./sshkey.exp ip password \n"
+if { $argc != 3 } {
+    send_user "Usage: ./sshkey.exp ip username password \n"
     exit
 }
 
+if {! [file exists ~/.ssh/id_rsa.pub]} {
+    spawn ssh-keygen -t rsa
+    expect "Enter file in which to save the key*"
+    send "\r"
+    expect "Enter passphrase*"
+    send "\r"
+    expect "Enter same passphrase again*"
+    send "\r"
+    expect "Your identification has been saved*"
+}
+
 set ip [lindex $argv 0]
-set password [lindex $argv 1]
-set username root
+set username [lindex $argv 1]
+set password [lindex $argv 2]
 set timeout 10
 
 set pubkey_file [open "~/.ssh/id_rsa.pub" r]
