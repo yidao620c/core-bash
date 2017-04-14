@@ -21,14 +21,15 @@ tar -zcvf install_cairo.tar.gz install_cairo
 cd ../..
 echo "为脚本增加可执行权限"
 chmod +x winstore-ansible/*.sh
-chmod +x winstore-ansible/*.exp
+chmod +x winstore-ansible/resource/shell/*.sh
+chmod +x winstore-ansible/resource/shell/*.exp
 
-mount -t cifs -o username="ceshi",password="ceshi" //10.10.161.99/public /mnt/ -o rw
+mount -t cifs -o username="samba",password="samba" //10.10.161.99/public /mnt/ -o rw
 echo "mount success? $?"
 
 echo "开始打包winstore..."
 new_file_name=winstore"$1"_install_$(date +"%Y%m%d")_svn.tar.gz
-tar -cpzvf ${new_file_name} --exclude=.svn  --exclude=.git --exclude=install_mysql.sh --exclude=mysql.yml --exclude=resource/install_cairo --exclude=resource/install_ceph_rpms --exclude=resource/install_more_rpms --exclude=resource/install_mysql_rpms --exclude=resource/install_rpms --exclude=resource/install_yum --exclude=resource/install_ceph --exclude=resource/install_tgt --exclude=resource/install_venv winstore-ansible/
+tar -cpzvf ${new_file_name} --exclude=.svn  --exclude=.git --exclude=install_mysql.sh --exclude=uninstall_mysql.sh --exclude=mysql.yml --exclude=clean_mysql.yml --exclude=resource/install_cairo --exclude=resource/install_ceph_rpms --exclude=resource/install_more_rpms --exclude=resource/install_mysql_rpms --exclude=resource/install_rpms --exclude=resource/install_yum --exclude=resource/install_ceph --exclude=resource/install_tgt --exclude=resource/install_venv winstore-ansible/
 echo "打完包后删除里面的tar包"
 rm -f winstore-ansible/resource/install_rpms.tar.gz
 rm -f winstore-ansible/resource/install_yum.tar.gz
@@ -38,7 +39,7 @@ rm -f winstore-ansible/resource/install_ceph_rpms.tar.gz
 rm -f winstore-ansible/resource/install_tgt.tar.gz
 rm -f winstore-ansible/resource/install_cairo.tar.gz
 echo "将升级后的包上传至samba服务器"
-/bin/cp "${new_file_name}" /mnt/winhong_ceph/winstore3.6Beta/"${new_file_name}"
+/bin/cp "${new_file_name}" /mnt/winstore-liuhua/winstore4.0Beta/"${new_file_name}"
 rm -f "${new_file_name}"
 
 if [[ "$#" > 1 && "$2" == "mysql" ]]; then
@@ -47,7 +48,7 @@ if [[ "$#" > 1 && "$2" == "mysql" ]]; then
     tar -zcvf install_mysql_rpms.tar.gz install_mysql_rpms
     cd ../..
     new_file_name=mysql_install_$(date +"%Y%m%d")_svn.tar.gz
-    tar -cpzvf ${new_file_name}  winstore-ansible/install_mysql.sh winstore-ansible/mysql.yml winstore-ansible/group_vars winstore-ansible/install_ansible winstore-ansible/resource/install_mysql_rpms.tar.gz winstore-ansible/resource/shell/mysql.sh winstore-ansible/resource/shell/mysql_ha.sh
+    tar -cpzvf ${new_file_name} winstore-ansible/hosts winstore-ansible/install_mysql.sh winstore-ansible/uninstall_mysql.sh winstore-ansible/mysql.yml winstore-ansible/clean_mysql.yml  winstore-ansible/group_vars winstore-ansible/install_ansible winstore-ansible/resource/install_mysql_rpms.tar.gz winstore-ansible/resource/shell/mysql.sh winstore-ansible/resource/shell/mysql_ha.sh
     echo "打完包后删除里面的tar包"
     rm -f winstore-ansible/resource/install_mysql_rpms.tar.gz
     echo "将升级后的包上传至samba服务器"
@@ -55,7 +56,7 @@ if [[ "$#" > 1 && "$2" == "mysql" ]]; then
     tar zxf "${new_file_name}" -C mysql-ansible --strip 1
     tar zcf "${new_file_name}" mysql-ansible
     rm -rf mysql-ansible
-    /bin/cp "${new_file_name}" /mnt/winhong_ceph/winstore3.6Beta/"${new_file_name}"
+    /bin/cp "${new_file_name}" /mnt/winstore-liuhua/winstore4.0Beta/"${new_file_name}"
     rm -f "${new_file_name}"
 fi
 
