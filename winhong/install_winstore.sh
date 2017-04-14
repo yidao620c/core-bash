@@ -10,7 +10,7 @@ if [[ ! -f /root/.ssh/id_rsa.pub ]]; then
 fi
 for s in "${servers[@]}"
 do
-    ssh $s -o PasswordAuthentication=no StrictHostKeyChecking=no &>/dev/null
+    ssh $s -o PasswordAuthentication=no -o StrictHostKeyChecking=no &>/dev/null
     if [[ "$?" -ne "0" ]]; then
         echo "请先运行./sshkey.sh 配置无密码访问"
         exit 1
