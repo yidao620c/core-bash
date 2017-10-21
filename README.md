@@ -1,12 +1,14 @@
 ## Bash 基础参考
 
+shell脚本的一些例子
+
 --------------------------------
 
 ## License
 
 (The Apache License)
 
-Copyright (c) 2013-2016 [Xiong Neng](http://yidao620c.github.io/) and other contributors
+Copyright (c) 2013-2017 [Xiong Neng](https://www.xncoding.com/) and other contributors
 
 Licensed under the Apache License, Version 2.0 (the "License"); 
 you may not use this file except in compliance with the License. 
