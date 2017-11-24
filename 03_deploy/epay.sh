@@ -47,9 +47,9 @@ if [[ "$1" == "start" ]]; then
         exit 1
     fi
     profile="$2"
-    if [[ "$profile" != "dev" || "$profile" != "test" || "$profile" != "show" || "$profile" != "production" ]]; then
-        echo "参数错误，请输入正确的profile参数，使用方法：
-        echo "./epay.sh start {profile}    # 启动应用，{profile}运行环境，目前只能输入四个值：dev/test/show/production"
+    if [[ "$profile" != "dev" && "$profile" != "test" && "$profile" != "show" && "$profile" != "production" ]]; then
+        echo "参数错误，请输入正确的profile参数，使用方法："
+        echo "./epay.sh start {profile}    ==> 启动应用，{profile}取值：dev|test|show|production"
         exit 1
     fi
     start "${profile}"
@@ -59,16 +59,16 @@ elif [[ "$1" == "stop" ]]; then
         exit 1
     fi
     profile="$2"
-    if [[ "$profile" != "dev" || "$profile" != "test" || "$profile" != "show" || "$profile" != "production" ]]; then
-        echo "参数错误，请输入正确的profile参数，使用方法：
-        echo "./epay.sh stop {profile}     # 停止应用，{profile}运行环境，目前只能输入四个值：dev/test/show/production"
+    if [[ "$profile" != "dev" && "$profile" != "test" && "$profile" != "show" && "$profile" != "production" ]]; then
+        echo "参数错误，请输入正确的profile参数，使用方法："
+        echo "./epay.sh stop {profile}     ==> 停止应用，{profile}取值：dev|test|show|production"
         exit 1
     fi
     jarfile=$(ls target/*.jar)
     stop $profile $jarfile
 else
     echo "参数错误，使用方法：{}参数是必填的，[]参数可选"
-    echo "./epay.sh start {profile}    # 启动应用，{profile}运行环境，目前只能输入四个值：dev/test/show/production"
-    echo "./epay.sh stop  {profile}    # 停止应用，{profile}运行环境，目前只能输入四个值：dev/test/show/production"
+    echo "./epay.sh start {profile}    ==> 启动应用，{profile}取值：dev|test|show|production"
+    echo "./epay.sh stop  {profile}    ==> 停止应用，{profile}取值：dev|test|show|production"
     exit 1
 fi
